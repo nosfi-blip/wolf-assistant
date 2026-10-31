@@ -1,0 +1,710 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lumi • Голосовой Чиби-Волчонок</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #1e1b2e 0%, #0d0e14 100%);
+      color: #e2e8f0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* Анимации дыхания и покачивания */
+    @keyframes gentleBreath {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-4px) scale(1.012); }
+    }
+
+    @keyframes earWiggleL {
+      0%, 88%, 100% { transform: rotate(0deg); }
+      92% { transform: rotate(-7deg); }
+      96% { transform: rotate(4deg); }
+    }
+
+    @keyframes earWiggleR {
+      0%, 85%, 100% { transform: rotate(0deg); }
+      89% { transform: rotate(8deg); }
+      94% { transform: rotate(-4deg); }
+    }
+
+    @keyframes tailWag {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(8deg); }
+    }
+
+    @keyframes listeningPulse {
+      0%, 100% { transform: scale(1); opacity: 0.2; }
+      50% { transform: scale(1.12); opacity: 0.55; }
+    }
+
+    @keyframes starGlow {
+      0%, 100% { filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.6)); }
+      50% { filter: drop-shadow(0 0 9px rgba(236, 72, 153, 0.95)); }
+    }
+
+    .wolf-body {
+      animation: gentleBreath 4s ease-in-out infinite;
+      transform-origin: center 230px;
+    }
+
+    .ear-left {
+      transform-origin: 75px 85px;
+      animation: earWiggleL 5s ease-in-out infinite;
+    }
+
+    .ear-right {
+      transform-origin: 185px 85px;
+      animation: earWiggleR 5.5s ease-in-out infinite 0.7s;
+    }
+
+    .wolf-tail {
+      transform-origin: 45px 225px;
+      animation: tailWag 3.2s ease-in-out infinite;
+    }
+
+    .gemini-star {
+      animation: starGlow 2.5s ease-in-out infinite;
+    }
+
+    .aura-listening {
+      animation: listeningPulse 2s ease-in-out infinite;
+    }
+
+    /* Кастомный тонкий скролл */
+    .custom-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #2e3247;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden justify-between">
+
+  <!-- Шапка -->
+  <header class="flex items-center justify-between px-5 py-3.5 bg-[#14151f]/80 backdrop-blur-md border-b border-[#23263b] z-20">
+    <div class="flex items-center gap-2.5">
+      <div id="statusDot" class="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc] transition-all duration-300"></div>
+      <div class="flex flex-col">
+        <span class="text-sm font-bold tracking-wider uppercase text-purple-200">Lumi</span>
+        <span id="subStatus" class="text-[10px] text-gray-400 font-medium">Спит и отдыхает... 💤</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Переключатель режима авто-слушания -->
+      <button id="autoVoiceToggle" class="px-2.5 py-1.5 rounded-xl border border-[#31354c] bg-[#1a1b28] text-[11px] text-gray-300 flex items-center gap-1.5 active:scale-95 transition">
+        <span id="autoIndicator" class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+        <span id="autoText">Авто-голос: выкл</span>
+      </button>
+
+      <!-- Настройки API -->
+      <button id="settingsBtn" class="p-2 rounded-xl border border-[#31354c] bg-[#1a1b28] hover:bg-[#232637] text-purple-300 text-xs active:scale-95 transition" title="Настройки API">
+        ⚙️
+      </button>
+    </div>
+  </header>
+
+  <!-- Интерактивная зона с чиби-волчонком -->
+  <main class="flex-1 flex flex-col items-center justify-center relative px-4 select-none">
+    
+    <!-- Пульсирующий ореол при слушании -->
+    <div id="listenAura" class="absolute w-64 h-64 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-2xl pointer-events-none opacity-0 transition-opacity duration-500 aura-listening"></div>
+
+    <!-- Облачко реплики над волчонком -->
+    <div id="bubbleWrapper" class="w-full max-w-sm mb-2 px-2 transition-all duration-300 opacity-90 scale-100">
+      <div class="bg-[#181a26]/90 border border-[#2d3148] p-3.5 rounded-2xl shadow-xl backdrop-blur-sm relative">
+        <p id="bubbleText" class="text-sm leading-relaxed text-gray-200 text-center font-normal">
+          Привет! Я чиби-волчонок Луми 🐾 Нажми на микрофон внизу и просто поговори со мной!
+        </p>
+        <!-- Стрелочка спич-бабла -->
+        <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#181a26] border-r border-b border-[#2d3148] transform rotate-45"></div>
+      </div>
+    </div>
+
+    <!-- Векторный персонаж (чиби-волчонок SVG) -->
+    <div id="wolfContainer" class="w-56 h-56 sm:w-64 sm:h-64 relative flex items-center justify-center cursor-pointer active:scale-95 transition-transform" title="Нажми на меня!">
+      <svg id="wolfSvg" viewBox="0 0 260 260" class="w-full h-full drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
+        <defs>
+          <!-- Шерсть градиент -->
+          <linearGradient id="furGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#E2E6F0" />
+            <stop offset="100%" stop-color="#BCC3D4" />
+          </linearGradient>
+          <!-- Внутреннее ушко -->
+          <linearGradient id="innerEarGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#FFBCC9" />
+            <stop offset="100%" stop-color="#FFA2B4" />
+          </linearGradient>
+          <!-- Футболка -->
+          <linearGradient id="shirtGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#242530" />
+            <stop offset="100%" stop-color="#14151C" />
+          </linearGradient>
+          <!-- Звезда Gemini -->
+          <linearGradient id="geminiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#C084FC" />
+            <stop offset="50%" stop-color="#818CF8" />
+            <stop offset="100%" stop-color="#38BDF8" />
+          </linearGradient>
+        </defs>
+
+        <!-- Хвостик -->
+        <g class="wolf-tail">
+          <path d="M 60 200 C 25 190 20 230 45 235 C 65 240 75 220 70 205 Z" fill="url(#furGrad)" stroke="#9CA3AF" stroke-width="1.5" />
+          <path d="M 35 225 C 28 215 32 205 45 210 Z" fill="#FFFFFF" />
+        </g>
+
+        <!-- Тельце и футболка -->
+        <g id="bodyGroup" class="wolf-body">
+          <!-- Задние лапки сидячие -->
+          <ellipse cx="85" cy="235" rx="18" ry="12" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.2" />
+          <ellipse cx="175" cy="235" rx="18" ry="12" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.2" />
+
+          <!-- Футболка оверсайз -->
+          <path d="M 72 165 C 70 185 75 228 90 228 L 170 228 C 185 228 190 185 188 165 C 170 158 90 158 72 165 Z" fill="url(#shirtGrad)" stroke="#374151" stroke-width="1.5" />
+
+          <!-- Рукава -->
+          <ellipse cx="70" cy="188" rx="14" ry="18" fill="url(#shirtGrad)" transform="rotate(20 70 188)" />
+          <ellipse cx="190" cy="188" rx="14" ry="18" fill="url(#shirtGrad)" transform="rotate(-20 190 188)" />
+
+          <!-- Белые передние лапки -->
+          <ellipse id="pawL" cx="80" cy="205" rx="11" ry="9" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1" />
+          <ellipse id="pawR" cx="180" cy="205" rx="11" ry="9" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1" />
+
+          <!-- Светящаяся 4-лучевая эмблема звезды Gemini -->
+          <g class="gemini-star" transform="translate(130, 192)">
+            <path d="M 0 -13 Q 0 0 13 0 Q 0 0 0 13 Q 0 0 -13 0 Q 0 0 0 -13 Z" fill="url(#geminiGrad)" />
+            <circle cx="0" cy="0" r="3" fill="#FFFFFF" />
+          </g>
+        </g>
+
+        <!-- Голова и ушки -->
+        <g id="headGroup" class="wolf-body">
+          <!-- Левое ушко -->
+          <g class="ear-left">
+            <path d="M 75 90 C 65 30 100 20 115 65 Z" fill="url(#furGrad)" stroke="#9CA3AF" stroke-width="1.5" />
+            <!-- Внутреннее розовое ушко -->
+            <path d="M 78 82 C 73 40 98 32 108 65 Z" fill="url(#innerEarGrad)" />
+          </g>
+
+          <!-- Правое ушко -->
+          <g class="ear-right">
+            <path d="M 185 90 C 195 30 160 20 145 65 Z" fill="url(#furGrad)" stroke="#9CA3AF" stroke-width="1.5" />
+            <path d="M 182 82 C 187 40 162 32 152 65 Z" fill="url(#innerEarGrad)" />
+          </g>
+
+          <!-- Форма головы чиби -->
+          <ellipse cx="130" cy="115" rx="66" ry="56" fill="url(#furGrad)" stroke="#9CA3AF" stroke-width="1.5" />
+
+          <!-- Белые щечки и нижняя мордочка -->
+          <path d="M 78 125 C 75 155 105 162 130 162 C 155 162 185 155 182 125 C 160 142 100 142 78 125 Z" fill="#FFFFFF" />
+
+          <!-- Пушок на макушке -->
+          <path d="M 120 60 C 125 45 135 45 140 60 C 137 53 133 50 130 60 Z" fill="url(#furGrad)" />
+
+          <!-- Румянец на щечках -->
+          <ellipse id="blushL" cx="92" cy="132" rx="10" ry="5" fill="#FFAAA6" opacity="0.65" />
+          <ellipse id="blushR" cx="168" cy="132" rx="10" ry="5" fill="#FFAAA6" opacity="0.65" />
+
+          <!-- Глазки (Правый и Левый) -->
+          <g id="eyesWrap">
+            <!-- Левый глаз -->
+            <g id="eyeLeft">
+              <ellipse id="pupilL" cx="102" cy="115" rx="14" ry="17" fill="#181920" />
+              <!-- Блики -->
+              <circle id="sparkleL1" cx="98" cy="108" r="5.5" fill="#FFFFFF" />
+              <circle id="sparkleL2" cx="107" cy="122" r="2.5" fill="#FFFFFF" opacity="0.9" />
+            </g>
+
+            <!-- Правый глаз -->
+            <g id="eyeRight">
+              <ellipse id="pupilR" cx="158" cy="115" rx="14" ry="17" fill="#181920" />
+              <!-- Блики -->
+              <circle id="sparkleR1" cx="154" cy="108" r="5.5" fill="#FFFFFF" />
+              <circle id="sparkleR2" cx="163" cy="122" r="2.5" fill="#FFFFFF" opacity="0.9" />
+            </g>
+          </g>
+
+          <!-- Носик -->
+          <ellipse cx="130" cy="128" rx="4.5" ry="3.5" fill="#1E202B" />
+
+          <!-- Ротик с динамической анимацией речи -->
+          <g id="mouthWrap">
+            <path id="mouth" d="M 124 135 Q 130 140 136 135" fill="none" stroke="#2D303E" stroke-width="2.2" stroke-linecap="round" />
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Индикатор текущей речи пользователя -->
+    <div id="interimText" class="text-xs text-purple-300 font-medium h-5 mt-2 text-center transition-all opacity-0">
+      ...
+    </div>
+  </main>
+
+  <!-- Нижняя панель управления: Большая кнопка микрофона и текстовый ввод -->
+  <footer class="p-4 bg-[#12131c]/90 border-t border-[#212437] backdrop-blur-md">
+    <div class="max-w-md mx-auto flex flex-col items-center gap-3">
+      
+      <!-- Большая кнопка микрофона -->
+      <button 
+        id="micBtn" 
+        class="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.4)] active:scale-95 transition-all relative"
+        title="Нажми и говори"
+      >
+        <span id="micRing" class="absolute inset-0 rounded-full border-2 border-pink-400 opacity-0 scale-100 transition-all"></span>
+        <svg id="micIcon" class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+      </button>
+      <span class="text-[11px] font-semibold text-gray-400 tracking-wide">
+        Нажми на микрофон, чтобы поговорить
+      </span>
+
+      <!-- Текстовое резервное поле (если не хочется говорить вслух) -->
+      <form id="textForm" class="flex w-full items-center gap-2 mt-1">
+        <input 
+          id="textInput" 
+          type="text" 
+          placeholder="Или напиши сюда..." 
+          class="flex-1 bg-[#1a1b28] border border-[#2b2e44] text-xs text-white px-3.5 py-2.5 rounded-xl outline-none focus:border-purple-500 transition"
+        >
+        <button 
+          type="submit" 
+          class="p-2.5 bg-[#232638] hover:bg-[#2e324b] text-purple-300 rounded-xl border border-[#373b56] active:scale-95 transition"
+        >
+          ➔
+        </button>
+      </form>
+    </div>
+  </footer>
+
+  <!-- Модальное окно: Ключ Gemini API -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-[#161724] border border-[#2b2e46] rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center pb-2 border-b border-[#24273c]">
+        <h3 class="text-sm font-bold text-purple-300">Настройки Gemini AI</h3>
+        <button id="closeSettingsBtn" class="text-gray-400 hover:text-white text-base font-bold p-1">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">API Key Gemini:</label>
+          <input 
+            id="apiKeyInput" 
+            type="password" 
+            placeholder="AIzaSy..." 
+            class="w-full bg-[#1e2030] border border-[#323650] rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500"
+          >
+          <p class="text-[10px] text-gray-400 mt-1">
+            Ключ сохраняется только в твоем браузере. Без ключа волчонок отвечает в умном встроенном режиме!
+          </p>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Модель:</label>
+          <select id="modelSelect" class="w-full bg-[#1e2030] border border-[#323650] rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500">
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Быстрая)</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-1">
+        <button id="saveSettingsBtn" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
+          Сохранить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Элементы UI ---
+    const statusDot = document.getElementById('statusDot');
+    const subStatus = document.getElementById('subStatus');
+    const bubbleText = document.getElementById('bubbleText');
+    const micBtn = document.getElementById('micBtn');
+    const micRing = document.getElementById('micRing');
+    const interimText = document.getElementById('interimText');
+    const listenAura = document.getElementById('listenAura');
+    const autoVoiceToggle = document.getElementById('autoVoiceToggle');
+    const autoIndicator = document.getElementById('autoIndicator');
+    const autoText = document.getElementById('autoText');
+
+    const textForm = document.getElementById('textForm');
+    const textInput = document.getElementById('textInput');
+
+    // Настройки
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const modelSelect = document.getElementById('modelSelect');
+
+    // Детали моськи волчонка
+    const wolfContainer = document.getElementById('wolfContainer');
+    const pupilL = document.getElementById('pupilL');
+    const pupilR = document.getElementById('pupilR');
+    const mouth = document.getElementById('mouth');
+    const blushL = document.getElementById('blushL');
+    const blushR = document.getElementById('blushR');
+    const sparkleL1 = document.getElementById('sparkleL1');
+    const sparkleR1 = document.getElementById('sparkleR1');
+
+    // Состояние
+    let currentState = 'idle'; // idle | listening | thinking | talking
+    let autoVoice = false;
+    let recognition = null;
+    let isListening = false;
+    let mouthInterval = null;
+    let currentUtterance = null;
+
+    let apiKey = localStorage.getItem('lumi_gemini_key') || '';
+    let selectedModel = localStorage.getItem('lumi_gemini_model') || 'gemini-1.5-flash';
+
+    apiKeyInput.value = apiKey;
+    modelSelect.value = selectedModel;
+
+    // --- Управление состояниями и эмоциями мордочки ---
+
+    // Моргание каждые 3.5 секунды
+    setInterval(() => {
+      if (currentState === 'idle' || currentState === 'listening') {
+        pupilL.setAttribute('ry', '1.5');
+        pupilR.setAttribute('ry', '1.5');
+        sparkleL1.style.opacity = '0';
+        sparkleR1.style.opacity = '0';
+        setTimeout(() => {
+          pupilL.setAttribute('ry', '17');
+          pupilR.setAttribute('ry', '17');
+          sparkleL1.style.opacity = '1';
+          sparkleR1.style.opacity = '1';
+        }, 160);
+      }
+    }, 3600);
+
+    function setState(state) {
+      currentState = state;
+      clearInterval(mouthInterval);
+
+      if (state === 'idle') {
+        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]';
+        subStatus.innerText = 'Спит и отдыхает... 💤';
+        listenAura.classList.add('opacity-0');
+        micRing.classList.add('opacity-0');
+        micRing.classList.remove('animate-ping');
+        
+        // Спокойные глазки и нейтральный ротик
+        pupilL.setAttribute('cy', '115');
+        pupilR.setAttribute('cy', '115');
+        mouth.setAttribute('d', 'M 124 135 Q 130 140 136 135');
+        mouth.setAttribute('fill', 'none');
+        mouth.setAttribute('stroke', '#2D303E');
+        blushL.setAttribute('opacity', '0.65');
+        blushR.setAttribute('opacity', '0.65');
+      }
+      else if (state === 'listening') {
+        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-pink-400 shadow-[0_0_10px_#f472b6] animate-pulse';
+        subStatus.innerText = 'Слушаю твой голос... 👂✨';
+        listenAura.classList.remove('opacity-0');
+        micRing.classList.remove('opacity-0');
+        micRing.classList.add('animate-ping');
+
+        // Внимательные блестящие глазки
+        pupilL.setAttribute('cy', '113');
+        pupilR.setAttribute('cy', '113');
+        mouth.setAttribute('d', 'M 126 136 Q 130 138 134 136');
+        blushL.setAttribute('opacity', '0.9');
+        blushR.setAttribute('opacity', '0.9');
+      }
+      else if (state === 'thinking') {
+        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24] animate-bounce';
+        subStatus.innerText = 'Думаю над ответом... 💭';
+        listenAura.classList.add('opacity-0');
+        micRing.classList.add('opacity-0');
+        micRing.classList.remove('animate-ping');
+
+        // Закатывает глазки вверх и вбок
+        pupilL.setAttribute('cy', '109');
+        pupilR.setAttribute('cy', '109');
+        mouth.setAttribute('d', 'M 125 137 Q 130 134 135 137');
+      }
+      else if (state === 'talking') {
+        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]';
+        subStatus.innerText = 'Говорю тебе... 🐾';
+        listenAura.classList.add('opacity-0');
+
+        pupilL.setAttribute('cy', '115');
+        pupilR.setAttribute('cy', '115');
+
+        // Живой шевелящийся ротик во время речи
+        let open = false;
+        mouthInterval = setInterval(() => {
+          open = !open;
+          if (open) {
+            mouth.setAttribute('d', 'M 123 134 Q 130 146 137 134 Z');
+            mouth.setAttribute('fill', '#FF8598');
+            mouth.setAttribute('stroke', '#E11D48');
+          } else {
+            mouth.setAttribute('d', 'M 124 135 Q 130 140 136 135');
+            mouth.setAttribute('fill', 'none');
+            mouth.setAttribute('stroke', '#2D303E');
+          }
+        }, 140);
+      }
+    }
+
+    // Пасхалка: тыкнуть по волчонку пальцем
+    wolfContainer.addEventListener('click', () => {
+      blushL.setAttribute('opacity', '1');
+      blushR.setAttribute('opacity', '1');
+      mouth.setAttribute('d', 'M 122 133 Q 130 148 138 133 Z');
+      mouth.setAttribute('fill', '#FF8598');
+      
+      const cuteReactions = [
+        "Тяф! Не щекочи меня! 🐾",
+        "Мурр... то есть, ауф! Я грозный чиби-волк! ✨",
+        "Я готов слушать, просто спроси голосом!"
+      ];
+      const r = cuteReactions[Math.floor(Math.random() * cuteReactions.length)];
+      bubbleText.innerText = r;
+      speakResponse(r);
+    });
+
+    // --- Распознавание голоса (Web Speech API) ---
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'ru-RU';
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        setState('listening');
+        interimText.innerText = 'Слушаю тебя...';
+        interimText.classList.remove('opacity-0');
+      };
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        interimText.innerText = interimTranscript || finalTranscript;
+
+        if (finalTranscript.trim().length > 0) {
+          handleUserQuery(finalTranscript.trim());
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.warn('Speech error:', event.error);
+        stopListening();
+        setState('idle');
+        interimText.classList.add('opacity-0');
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        if (currentState === 'listening') {
+          setState('idle');
+          interimText.classList.add('opacity-0');
+        }
+      };
+    } else {
+      micBtn.classList.add('opacity-60');
+      subStatus.innerText = 'Голос не поддерживается в этом браузере, используй поле ввода!';
+    }
+
+    function startListening() {
+      if (!recognition) return;
+      window.speechSynthesis.cancel();
+      try {
+        recognition.start();
+      } catch (e) {
+        recognition.stop();
+      }
+    }
+
+    function stopListening() {
+      if (recognition && isListening) {
+        recognition.stop();
+        isListening = false;
+      }
+    }
+
+    micBtn.addEventListener('click', () => {
+      if (isListening) {
+        stopListening();
+        setState('idle');
+      } else {
+        startListening();
+      }
+    });
+
+    // --- Синтез речи (Волчонок говорит вслух) ---
+
+    function speakResponse(text) {
+      window.speechSynthesis.cancel();
+      const cleanText = text.replace(/[*#_~]/g, '');
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'ru-RU';
+      utterance.rate = 1.05; // чуть бодрее и милее
+      utterance.pitch = 1.25; // чуть повыше тембр под чиби-маскота
+
+      utterance.onstart = () => {
+        setState('talking');
+      };
+
+      utterance.onend = () => {
+        setState('idle');
+        if (autoVoice) {
+          setTimeout(() => startListening(), 600);
+        }
+      };
+
+      utterance.onerror = () => {
+        setState('idle');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // --- Обработка запроса: локальный режим или Gemini API ---
+
+    async function handleUserQuery(query) {
+      stopListening();
+      interimText.classList.add('opacity-0');
+      setState('thinking');
+      bubbleText.innerText = '«' + query + '»\nДумаю...';
+
+      let reply = '';
+
+      if (!apiKey || apiKey.trim() === '') {
+        // Умная локальная симуляция без необходимости вводить ключ
+        await new Promise(r => setTimeout(r, 900));
+        const q = query.toLowerCase();
+
+        if (q.includes('привет') || q.includes('здравствуй')) {
+          reply = "Привет-привет! Я Луми, твой персональный волчонок. Очень рад тебя слышать!";
+        } else if (q.includes('кто ты') || q.includes('как тебя зовут')) {
+          reply = "Я чиби-волчонок Луми! Ношу оверсайз худи с эмблемой Gemini и помогаю тебе во всем.";
+        } else if (q.includes('как дела') || q.includes('как ты')) {
+          reply = "У меня всё супер! Ушки навострены, хвостик виляет, готов болтать с тобой хоть весь день!";
+        } else if (q.includes('спой') || q.includes('песенк')) {
+          reply = "Ауууу! Луна светит ярко, а я пою для лучшего друга на свете!";
+        } else {
+          const defaults = [
+            "Какая интересная мысль! Я всё слышу своими пушистыми ушками. Чтобы я мог отвечать на любые сложные вопросы через нейросеть, добавь в настройках свой ключ Gemini!",
+            "Тяф! Я тебя отлично понял! Пока мы в быстром демо-режиме, но ты можешь подключить настоящий интеллект Gemini в шестеренке сверху.",
+            "Здорово сказано! Я запомнил каждое слово. Спроси меня что-нибудь еще!"
+          ];
+          reply = defaults[Math.floor(Math.random() * defaults.length)];
+        }
+      } else {
+        // Запрос к настоящей нейросети Google Gemini
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: query }] }],
+              systemInstruction: {
+                parts: [{ text: "Ты — Луми, милый, умный и преданный чиби-волчонок в черной оверсайз футболке со звездой Gemini. Отвечай на русском языке дружелюбно, емко и кратко (1-3 коротких предложения), чтобы удобно было озвучивать голосом. Добавляй немного милых эмодзи и волчьих повадок." }]
+              }
+            })
+          });
+
+          if (!res.ok) {
+            throw new Error(`Ошибка ${res.status}`);
+          }
+
+          const data = await res.json();
+          reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Хм, кажется, мысль ускользнула...";
+        } catch (e) {
+          reply = "Ой, что-то пошло не так при связи с Gemini. Проверь ключик в настройках!";
+        }
+      }
+
+      bubbleText.innerText = reply;
+      speakResponse(reply);
+    }
+
+    // Текстовая отправка
+    textForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = textInput.value.trim();
+      if (!val) return;
+      textInput.value = '';
+      handleUserQuery(val);
+    });
+
+    // Авто-голос (Hands-free)
+    autoVoiceToggle.addEventListener('click', () => {
+      autoVoice = !autoVoice;
+      if (autoVoice) {
+        autoIndicator.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]';
+        autoText.innerText = 'Авто-голос: вкл';
+        startListening();
+      } else {
+        autoIndicator.className = 'w-1.5 h-1.5 rounded-full bg-gray-500';
+        autoText.innerText = 'Авто-голос: выкл';
+        stopListening();
+      }
+    });
+
+    // Настройки модалки
+    settingsBtn.addEventListener('click', () => {
+      settingsModal.classList.remove('hidden');
+      settingsModal.classList.add('flex');
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+      settingsModal.classList.add('hidden');
+      settingsModal.classList.remove('flex');
+    });
+
+    saveSettingsBtn.addEventListener('click', () => {
+      apiKey = apiKeyInput.value.trim();
+      selectedModel = modelSelect.value;
+      localStorage.setItem('lumi_gemini_key', apiKey);
+      localStorage.setItem('lumi_gemini_model', selectedModel);
+
+      settingsModal.classList.add('hidden');
+      settingsModal.classList.remove('flex');
+
+      const msg = apiKey ? "Ура! Ключ Gemini сохранен. Теперь я стал еще умнее!" : "Работаем в быстром режиме без ключа!";
+      bubbleText.innerText = msg;
+      speakResponse(msg);
+    });
+
+    // Инициализация
+    setState('idle');
+  </script>
+</body>
+</html>
+```
