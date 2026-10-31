@@ -125,9 +125,7 @@
       transform-origin: bottom center;
     }
 
-    /* === Стили и анимации мимики и состояний === */
-
-    /* Покой */
+    /* === АНИМАЦИИ === */
     .idle svg#jam-wolf {
       animation: jamBreathe 3.5s ease-in-out infinite alternate;
     }
@@ -136,7 +134,6 @@
       100% { transform: translateY(-5px) scale(1.015); }
     }
 
-    /* Моргание */
     .eye-round {
       transform-origin: 150px 148px;
       transition: transform 0.1s ease;
@@ -145,7 +142,6 @@
       transform: scaleY(0.08);
     }
 
-    /* Слушает */
     .listening #ear-left {
       animation: earWiggle 0.4s ease-in-out infinite alternate;
     }
@@ -154,7 +150,7 @@
       100% { transform: rotate(-8deg); }
     }
 
-    /* Говорит */
+    /* Говорит: отчетливое покачивание и открывание рта */
     .speaking svg#jam-wolf {
       animation: jamTalkBounce 0.22s ease-in-out infinite alternate;
     }
@@ -168,14 +164,13 @@
     }
     @keyframes jamTalkBounce {
       0% { transform: translateY(0); }
-      100% { transform: translateY(-4px) scale(1.02); }
+      100% { transform: translateY(-5px) scale(1.02); }
     }
     @keyframes mouthFlap {
-      0% { transform: scaleY(0.3); }
-      100% { transform: scaleY(1.25); }
+      0% { transform: scaleY(0.2); }
+      100% { transform: scaleY(1.3); }
     }
 
-    /* Думает */
     .thinking svg#jam-wolf {
       animation: jamThinkTilt 1s ease-in-out infinite alternate;
     }
@@ -184,14 +179,15 @@
       100% { transform: rotate(4deg) translateY(-6px); }
     }
 
-    /* Злится */
     .angry #brow-left { transform: rotate(18deg) translate(2px, 4px); }
     .angry #brow-right { transform: rotate(-18deg) translate(-2px, 4px); }
     .angry #fx-anger { display: block !important; }
     .angry #mouth-open-path {
       display: block !important;
       fill: #ef4444;
-      d: path("M 140 176 L 160 176 L 150 186 Z");
+    }
+    .angry #mouth-closed-path {
+      display: none !important;
     }
     .angry svg#jam-wolf {
       animation: angerShake 0.12s ease-in-out infinite alternate;
@@ -201,23 +197,17 @@
       100% { transform: translateX(2px); }
     }
 
-    /* Грустит / обижается */
     .sad #brow-left { transform: rotate(-16deg) translate(-2px, -3px); }
     .sad #brow-right { transform: rotate(16deg) translate(2px, -3px); }
     .sad #ear-left { transform: rotate(-14deg) translateY(6px); }
     .sad #ear-right { transform: rotate(14deg) translateY(6px); }
     .sad #fx-tear { display: block !important; }
-    .sad #mouth-closed-path {
-      d: path("M 142 178 Q 150 170 158 178");
-    }
 
-    /* Смущается */
     .blushing #fx-blush { display: block !important; }
     .blushing #ear-left { transform: rotate(-8deg); }
     .blushing #ear-right { transform: rotate(8deg); }
     .blushing .eye-round { transform: translate(-3px, 2px); }
 
-    /* Ест сэндвич */
     .eating #jam-sandwich {
       display: block !important;
       animation: chewSandwich 0.35s ease-in-out infinite alternate;
@@ -228,7 +218,6 @@
       100% { transform: translateY(-5px) rotate(4deg); }
     }
 
-    /* Танцует */
     .dancing svg#jam-wolf {
       animation: jamDance 0.45s ease-in-out infinite alternate;
     }
@@ -238,7 +227,6 @@
       100% { transform: rotate(7deg) translateY(0); }
     }
 
-    /* Спит */
     .sleeping .eye-round { display: none; }
     .sleeping .eye-sleep { display: block !important; }
     .sleeping #fx-zzz { display: block !important; }
@@ -250,7 +238,6 @@
       100% { transform: translateY(9px) rotate(-1deg); }
     }
 
-    /* Хвостик */
     #jam-tail {
       transform-origin: 195px 235px;
       animation: tailWag 2.5s ease-in-out infinite alternate;
@@ -267,7 +254,6 @@
       100% { transform: rotate(14deg); }
     }
 
-    /* Текст статуса и бабл */
     .status-text {
       font-size: 0.85rem;
       color: var(--accent);
@@ -287,7 +273,7 @@
       padding: 12px 18px;
       max-width: 90%;
       min-height: 48px;
-      max-height: 130px;
+      max-height: 140px;
       overflow-y: auto;
       font-size: 0.95rem;
       line-height: 1.4;
@@ -341,7 +327,6 @@
       color: var(--text-dim);
     }
 
-    /* Модалка настроек */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -463,11 +448,10 @@
           <path d="M 255 180 C 248 198 230 205 215 200 C 228 185 242 180 255 180 Z" fill="#ffffff" stroke="#363d4e" stroke-width="4"/>
         </g>
 
-        <!-- Лапки задние -->
+        <!-- Лапки -->
         <g id="jam-feet">
           <rect x="105" y="275" width="34" height="28" rx="14" fill="#ffffff" stroke="#363d4e" stroke-width="5"/>
           <path d="M 116 288 L 116 298 M 128 288 L 128 298" stroke="#363d4e" stroke-width="3" stroke-linecap="round"/>
-
           <rect x="160" y="275" width="34" height="28" rx="14" fill="#ffffff" stroke="#363d4e" stroke-width="5"/>
           <path d="M 171 288 L 171 298 M 183 288 L 183 298" stroke="#363d4e" stroke-width="3" stroke-linecap="round"/>
         </g>
@@ -489,14 +473,13 @@
           </g>
         </g>
 
-        <!-- Левое ухо -->
+        <!-- Ушки -->
         <g id="ear-left" style="transform-origin: 90px 115px; transition: transform 0.3s ease;">
           <path d="M 72 115 C 50 70 70 18 102 38 C 115 70 108 105 98 118 Z" fill="#b8c0cc" stroke="#363d4e" stroke-width="5" stroke-linejoin="round"/>
           <path d="M 78 105 C 64 74 76 38 98 52 C 105 72 100 96 94 106 Z" fill="#5a6273"/>
           <path d="M 83 98 C 73 76 82 52 96 62 C 100 76 96 92 92 99 Z" fill="#fca5a5"/>
         </g>
 
-        <!-- Правое ухо -->
         <g id="ear-right" style="transform-origin: 210px 115px; transition: transform 0.3s ease;">
           <path d="M 228 115 C 250 70 230 18 198 38 C 185 70 192 105 202 118 Z" fill="#b8c0cc" stroke="#363d4e" stroke-width="5" stroke-linejoin="round"/>
           <path d="M 222 105 C 236 74 224 38 202 52 C 195 72 200 96 206 106 Z" fill="#5a6273"/>
@@ -506,13 +489,13 @@
         <!-- Голова -->
         <path d="M 80 130 C 52 140 50 160 70 170 C 50 178 54 200 80 198 C 95 218 205 218 220 198 C 246 200 250 178 230 170 C 250 160 248 140 220 130 C 225 80 75 80 80 130 Z" fill="#b8c0cc" stroke="#363d4e" stroke-width="5" stroke-linejoin="round"/>
 
-        <!-- Светлая маска сердечком -->
+        <!-- Мордочка -->
         <path d="M 98 145 C 80 165 90 195 120 195 C 135 195 145 186 150 182 C 155 186 165 195 180 195 C 210 195 220 165 202 145 C 190 130 160 135 150 148 C 140 135 110 130 98 145 Z" fill="#ffffff" stroke="#363d4e" stroke-width="4"/>
 
-        <!-- Чубчик-завиток -->
+        <!-- Чубчик -->
         <path d="M 135 78 C 120 62 140 38 160 45 C 172 50 170 65 158 68 C 168 64 175 72 165 82 C 152 86 142 84 135 78 Z" fill="#b8c0cc" stroke="#363d4e" stroke-width="4.5" stroke-linejoin="round"/>
 
-        <!-- Румянец базовый -->
+        <!-- Румянец -->
         <g stroke="#f87171" stroke-width="3" stroke-linecap="round">
           <line x1="96" y1="172" x2="102" y2="180" />
           <line x1="104" y1="172" x2="110" y2="180" />
@@ -547,42 +530,36 @@
         <!-- Ротик закрытый -->
         <path id="mouth-closed-path" d="M 140 172 Q 145 178 150 173 Q 155 178 160 172" stroke="#1e222b" stroke-width="3.5" stroke-linecap="round" fill="none"/>
 
-        <!-- Ротик открытый (анимируется) -->
+        <!-- Ротик открытый -->
         <path id="mouth-open-path" d="M 140 172 Q 150 192 160 172 Z" fill="#e11d48" stroke="#1e222b" stroke-width="3" style="display: none;"/>
 
-        <!-- === Оверлеи спецэффектов и эмоций === -->
-        
-        <!-- Сэндвич (кушает) -->
+        <!-- Сэндвич -->
         <g id="jam-sandwich" style="display: none;">
           <polygon points="120,240 180,240 150,205" fill="#facc15" stroke="#363d4e" stroke-width="3.5"/>
           <line x1="126" y1="237" x2="174" y2="237" stroke="#22c55e" stroke-width="5" stroke-linecap="round"/>
           <line x1="130" y1="231" x2="170" y2="231" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
-          <!-- Крошки -->
           <circle cx="120" cy="250" r="2" fill="#facc15"/>
           <circle cx="178" cy="248" r="2.5" fill="#facc15"/>
         </g>
 
-        <!-- Слезинка (обиделся/грустит) -->
+        <!-- Слезинка -->
         <g id="fx-tear" style="display: none;">
           <ellipse cx="198" cy="162" rx="4" ry="6" fill="#38bdf8"/>
         </g>
 
-        <!-- Пар гнева (злится) -->
+        <!-- Гнев -->
         <g id="fx-anger" style="display: none;">
           <path d="M 60 70 Q 50 60 65 50" stroke="#f87171" stroke-width="3" fill="none" stroke-linecap="round"/>
           <path d="M 240 70 Q 250 60 235 50" stroke="#f87171" stroke-width="3" fill="none" stroke-linecap="round"/>
         </g>
 
-        <!-- Пылающий румянец (смущается) -->
+        <!-- Смущение -->
         <g id="fx-blush" style="display: none;">
           <ellipse cx="102" cy="175" rx="14" ry="7" fill="#fb7185" opacity="0.6"/>
           <ellipse cx="198" cy="175" rx="14" ry="7" fill="#fb7185" opacity="0.6"/>
         </g>
 
-        <!-- Ноты танца -->
         <text id="fx-notes" x="30" y="90" font-size="28" style="display: none;">🎵✨</text>
-
-        <!-- Сонные Zzz -->
         <text id="fx-zzz" x="220" y="80" font-size="26" font-weight="900" fill="#7aa2f7" style="display: none;">Zzz...</text>
       </svg>
     </div>
@@ -607,10 +584,10 @@
       </div>
 
       <div class="form-group">
-        <label>Голос озвучки (Онлайн Нейросеть / Системный):</label>
+        <label>Голос озвучки (Онлайн / Система):</label>
         <select id="voiceSelect" class="form-control">
-          <option value="neural_female">Онлайн: Светлана (Нейросеть, мягкий)</option>
-          <option value="neural_male">Онлайн: Дмитрий (Нейросеть, живой)</option>
+          <option value="neural_female">Онлайн: Светлана (Нейросеть)</option>
+          <option value="neural_male">Онлайн: Дмитрий (Нейросеть)</option>
           <option value="system">Системный синтезатор телефона</option>
         </select>
       </div>
@@ -644,9 +621,9 @@
     let synth = window.speechSynthesis;
     let audioPlayer = new Audio();
     
-    // Надежный таймер на временных метках (миллисекундах)
     let lastUserActionTime = Date.now();
     let idleLoop = null;
+    let currentEmotion = 'idle';
 
     const mascotBox = document.getElementById('mascotBox');
     const statusText = document.getElementById('statusText');
@@ -655,26 +632,36 @@
     const micHint = document.getElementById('micHint');
     const autoModeBtn = document.getElementById('autoModeBtn');
 
-    // 1. Моргание
+    const emotionLabels = {
+      idle: 'Привет! Я Джем 🐾',
+      listening: 'Джем слушает ушком 🐾',
+      thinking: 'Джем соображает...',
+      speaking: 'Джем говорит...',
+      angry: 'Джем злится! 💢',
+      sad: 'Джем грустит 😢',
+      blushing: 'Джем смущается 😳',
+      eating: 'Джем жуёт сэндвич 🥪',
+      dancing: 'Джем танцует ✨🐾',
+      sleeping: 'Джем сладко спит... 💤'
+    };
+
+    // Моргание
     setInterval(() => {
-      if (mascotBox.classList.contains('idle')) {
+      if (currentEmotion === 'idle' || currentEmotion === 'blushing') {
         mascotBox.classList.add('blinking');
         setTimeout(() => mascotBox.classList.remove('blinking'), 150);
       }
     }, 3800);
 
-    // 2. Сброс и проверка таймера бездействия
     function resetActivity() {
       lastUserActionTime = Date.now();
-      if (!mascotBox.classList.contains('speaking') && 
-          !mascotBox.classList.contains('listening') && 
-          !mascotBox.classList.contains('thinking')) {
-        setMascotEmotion('idle', 'Джем ждёт 🐾');
+      if (!['speaking', 'listening', 'thinking'].includes(currentEmotion)) {
+        setMascotEmotion('idle');
       }
     }
 
     function checkIdleState() {
-      if (isListening || (synth && synth.speaking) || !audioPlayer.paused || mascotBox.classList.contains('thinking')) {
+      if (isListening || (synth && synth.speaking) || !audioPlayer.paused || ['thinking', 'speaking', 'listening'].includes(currentEmotion)) {
         lastUserActionTime = Date.now();
         return;
       }
@@ -682,23 +669,23 @@
       const elapsed = Math.floor((Date.now() - lastUserActionTime) / 1000);
 
       if (elapsed >= 75) {
-        if (!mascotBox.classList.contains('sleeping')) {
-          setMascotEmotion('sleeping', 'Джем сладко спит... 💤');
+        if (currentEmotion !== 'sleeping') {
+          setMascotEmotion('sleeping');
           chatBubble.innerText = 'Снится сахарная косточка...';
         }
       } else if (elapsed >= 50) {
-        if (!mascotBox.classList.contains('dancing')) {
-          setMascotEmotion('dancing', 'Джем танцует ✨🐾');
+        if (currentEmotion !== 'dancing') {
+          setMascotEmotion('dancing');
           chatBubble.innerText = 'Лапками топ-топ! Танцуем!';
         }
       } else if (elapsed >= 25) {
-        if (!mascotBox.classList.contains('eating')) {
-          setMascotEmotion('eating', 'Джем жуёт сэндвич 🥪');
+        if (currentEmotion !== 'eating') {
+          setMascotEmotion('eating');
           chatBubble.innerText = 'Хрум-хрум! Очень вкусный сэндвич!';
         }
       } else if (elapsed >= 12) {
-        if (!mascotBox.classList.contains('idle')) {
-          setMascotEmotion('idle', 'Джем скучает...');
+        if (currentEmotion === 'idle') {
+          statusText.innerText = 'Джем скучает...';
         }
       }
     }
@@ -706,35 +693,48 @@
     clearInterval(idleLoop);
     idleLoop = setInterval(checkIdleState, 1000);
 
-    // Управление эмоциями Джема
-    function setMascotEmotion(emotionClass, label) {
-      // Скрываем все оверлеи спецэффектов
-      document.getElementById('fx-tear').style.display = 'none';
-      document.getElementById('fx-anger').style.display = 'none';
-      document.getElementById('fx-blush').style.display = 'none';
-      document.getElementById('fx-notes').style.display = 'none';
-      document.getElementById('fx-zzz').style.display = 'none';
-      document.getElementById('jam-sandwich').style.display = 'none';
-      document.querySelector('.eye-sleep').style.display = 'none';
+    function setMascotEmotion(emotionClass, customLabel = null) {
+      currentEmotion = emotionClass;
+
+      ['fx-tear', 'fx-anger', 'fx-blush', 'fx-notes', 'fx-zzz', 'jam-sandwich'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+
+      const eyeSleep = document.querySelector('.eye-sleep');
+      if (eyeSleep) eyeSleep.style.display = 'none';
+
+      const mouthClosed = document.getElementById('mouth-closed-path');
+      const mouthOpen = document.getElementById('mouth-open-path');
+
+      if (mouthClosed) mouthClosed.style.display = '';
+      if (mouthOpen) {
+        mouthOpen.style.display = 'none';
+        mouthOpen.style.fill = '#e11d48';
+      }
+
+      if (emotionClass === 'angry') {
+        if (mouthOpen) {
+          mouthOpen.style.display = 'block';
+          mouthOpen.style.fill = '#ef4444';
+        }
+        if (mouthClosed) mouthClosed.style.display = 'none';
+      }
 
       mascotBox.className = 'mascot-box ' + emotionClass;
-      statusText.innerText = label;
+      statusText.innerText = customLabel || emotionLabels[emotionClass] || 'Джем 🐾';
     }
 
-    // Автоматическое определение эмоции из ответа
     function detectEmotion(text) {
       const lower = text.toLowerCase();
-      if (/зл(ю|и|е)|бес(и|ит)|фу|отстань|хватит|ужас/.test(lower)) return 'angry';
-      if (/груст|обид|жаль|печал|эх|плач|слез/.test(lower)) return 'sad';
-      if (/смущ|красне|ой|мило|приятно|засмущ/.test(lower)) return 'blushing';
+      if (/зл(ю|и|е)|бес(и|ит)|фу|отстань|хватит|ужас|раздраж/.test(lower)) return 'angry';
+      if (/груст|обид|жаль|печал|эх|плач|слез|тоск/.test(lower)) return 'sad';
+      if (/смущ|красне|ой|мило|приятно|засмущ|стесня/.test(lower)) return 'blushing';
       return 'idle';
     }
 
-    // 3. Загрузка настроек
     document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
-    const savedVoiceMode = localStorage.getItem('jam_voice_mode') || 'neural_female';
-    document.getElementById('voiceSelect').value = savedVoiceMode;
-
+    document.getElementById('voiceSelect').value = localStorage.getItem('jam_voice_mode') || 'neural_female';
     const savedPitch = localStorage.getItem('jam_pitch') || '1.15';
     const savedRate = localStorage.getItem('jam_rate') || '1.0';
     document.getElementById('pitchInput').value = savedPitch;
@@ -742,7 +742,6 @@
     document.getElementById('rateInput').value = savedRate;
     document.getElementById('rateVal').innerText = savedRate;
 
-    // 4. Микрофон
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (SpeechRecognition) {
@@ -756,7 +755,7 @@
         isListening = true;
         micBtn.classList.add('active');
         micHint.innerText = 'Слушаю тебя...';
-        setMascotEmotion('listening', 'Джем слушает ушком 🐾');
+        setMascotEmotion('listening');
       };
 
       recognition.onresult = (e) => {
@@ -768,32 +767,31 @@
 
       recognition.onerror = () => {
         stopListening();
-        setMascotEmotion('idle', 'Привет! Я Джем 🐾');
+        setMascotEmotion('idle');
         micHint.innerText = 'Нажми и говори';
       };
 
       recognition.onend = () => {
         stopListening();
       };
-    } else {
-      micHint.innerText = 'Микрофон не поддерживается браузером';
     }
 
     function handleMicClick() {
       resetActivity();
       if (!recognition) {
-        alert('Открой сайт через Chrome на телефоне!');
+        alert('Открой через Chrome на телефоне!');
         return;
       }
       if (synth && synth.speaking) synth.cancel();
-      if (!audioPlayer.paused) audioPlayer.pause();
+      if (!audioPlayer.paused) {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+      }
 
       if (isListening) {
-        recognition.stop();
+        try { recognition.stop(); } catch(e) {}
       } else {
-        try {
-          recognition.start();
-        } catch(err) {
+        try { recognition.start(); } catch(err) {
           console.log(err);
         }
       }
@@ -802,45 +800,52 @@
     function stopListening() {
       isListening = false;
       micBtn.classList.remove('active');
+      if (!autoMode) micHint.innerText = 'Нажми и говори';
     }
 
-    // Очистка текста от любых эмодзи, звездочек и скобок
     function sanitizeForSpeech(rawText) {
+      if (!rawText) return '';
       return rawText
-        .replace(/\*[^*]*\*/g, '')                            // удаляет *действия в звездочках*
-        .replace(/\([^\)]*\)/g, '')                            // удаляет (пояснения в скобках)
-        .replace(/\[[^\]]*\]/g, '')                            // удаляет [скобки]
-        .replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '')    // намертво вырезает все Unicode эмодзи
-        .replace(/[*_#~`]/g, '')                               // служебный маркдаун
-        .replace(/\s+/g, ' ')                                  // лишние пробелы
+        .replace(/\*[^*]*\*/g, '')
+        .replace(/\([^\)]*\)/g, '')
+        .replace(/\[[^\]]*\]/g, '')
+        .replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '')
+        .replace(/[*_#~`]/g, '')
+        .replace(/\s+/g, ' ')
         .trim();
     }
 
-    // 5. Запрос к Gemini 3.6 Flash
     async function processUserQuery(query) {
       resetActivity();
-      setMascotEmotion('thinking', 'Джем соображает...');
+      setMascotEmotion('thinking');
       const apiKey = localStorage.getItem('gemini_api_key');
 
       if (!apiKey) {
         setTimeout(() => {
-          speakResponse("Я тебя отлично слышу! Но чтобы я стал сообразительным чиби-волчонком, добавь свой ключик в шестерёнку наверху!");
-        }, 800);
+          speakResponse("Я тебя отлично слышу! Но чтобы я стал умным чиби-волчонком, добавь свой ключик в шестерёнку наверху!");
+        }, 500);
         return;
       }
 
       try {
-        const systemInstruction = "Ты — Джем, маленький чиби-волчонок в черной футболке с логотипом Gemini. Ты общаешься голосом вслух! КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, описывать действия, эмоции, вставлять эмодзи или скобки. Говори только живым текстом от первого лица, весело, лаконично (1-2 емких предложения).";
-        
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              { role: "user", parts: [{ text: `${systemInstruction}\n\nСобеседник сказал: ${query}` }] }
-            ]
-          })
-        });
+        const systemPrompt = "Ты — Джем, милый и сообразительный чиби-волчонок в черной футболке с логотипом Gemini. Ты говоришь вслух. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, скобки, смайлики и описывать свои действия. Отвечай только прямой речью от 1-го лица, кратко и законченно (1-2 полных предложения). Никогда не обрывай мысль на середине!";
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                { role: "user", parts: [{ text: `${systemPrompt}\n\nСобеседник сказал: "${query}". Твой ответ:` }] }
+              ],
+              generationConfig: {
+                maxOutputTokens: 1024,
+                temperature: 0.8
+              }
+            })
+          }
+        );
 
         const data = await response.json();
 
@@ -850,7 +855,7 @@
         }
 
         if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-          const rawReply = data.candidates[0].content.parts[0].text;
+          const rawReply = data.candidates[0].content.parts[0].text || '';
           const cleanReply = sanitizeForSpeech(rawReply);
           const emotion = detectEmotion(rawReply);
           speakResponse(cleanReply || rawReply, emotion);
@@ -862,21 +867,29 @@
       }
     }
 
-    // 6. Озвучка ответа
     function speakResponse(text, targetEmotion = 'idle') {
       resetActivity();
       const speakText = sanitizeForSpeech(text);
+      if (!speakText) {
+        setMascotEmotion(targetEmotion);
+        return;
+      }
+
       chatBubble.innerText = speakText;
-      
-      // На время речи включаем состояние говорящего
-      setMascotEmotion('speaking', 'Джем говорит...');
+      setMascotEmotion('speaking');
 
       const voiceMode = localStorage.getItem('jam_voice_mode') || 'neural_female';
 
-      const onSpeakFinished = () => {
-        setMascotEmotion(targetEmotion, targetEmotion === 'idle' ? 'Привет! Я Джем 🐾' : `Джем (${targetEmotion})`);
+      const finishSpeech = () => {
+        setMascotEmotion(targetEmotion);
         resetActivity();
-        checkAutoMode();
+        if (autoMode) {
+          setTimeout(() => {
+            if (recognition && !isListening && currentEmotion !== 'speaking') {
+              try { recognition.start(); } catch(e){}
+            }
+          }, 600);
+        }
       };
 
       if (voiceMode.startsWith('neural')) {
@@ -884,14 +897,16 @@
         const encodedText = encodeURIComponent(speakText);
         const ttsUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${voiceName}&text=${encodedText}`;
 
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
         audioPlayer.src = ttsUrl;
         audioPlayer.playbackRate = parseFloat(localStorage.getItem('jam_rate') || '1.0');
 
-        audioPlayer.onended = onSpeakFinished;
-        audioPlayer.onerror = () => fallbackSystemSpeak(speakText, onSpeakFinished);
-        audioPlayer.play().catch(() => fallbackSystemSpeak(speakText, onSpeakFinished));
+        audioPlayer.onended = finishSpeech;
+        audioPlayer.onerror = () => fallbackSystemSpeak(speakText, finishSpeech);
+        audioPlayer.play().catch(() => fallbackSystemSpeak(speakText, finishSpeech));
       } else {
-        fallbackSystemSpeak(speakText, onSpeakFinished);
+        fallbackSystemSpeak(speakText, finishSpeech);
       }
     }
 
@@ -911,30 +926,24 @@
       synth.speak(utterance);
     }
 
-    function checkAutoMode() {
-      if (autoMode) {
-        setTimeout(() => {
-          if (recognition && !isListening) {
-            try { recognition.start(); } catch(e){}
-          }
-        }, 600);
-      }
-    }
-
     function toggleAutoMode() {
       resetActivity();
       autoMode = !autoMode;
       if (autoMode) {
         autoModeBtn.classList.add('active');
+        micHint.innerText = 'Авто-режим включён';
         if (!isListening && (!synth || !synth.speaking) && audioPlayer.paused) {
           handleMicClick();
         }
       } else {
         autoModeBtn.classList.remove('active');
+        micHint.innerText = 'Нажми и говори';
+        if (isListening) {
+          try { recognition.stop(); } catch(e) {}
+        }
       }
     }
 
-    // Меню настроек
     function openSettings() {
       document.getElementById('settingsModal').classList.add('open');
     }
@@ -968,8 +977,8 @@
 
       closeSettings();
       resetActivity();
-      alert('Настройки сохранены!');
+      chatBubble.innerText = 'Настройки сохранены! ✨';
     }
   </script>
 </body>
-  </html>
+</html>
