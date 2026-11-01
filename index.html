@@ -126,13 +126,16 @@
     const micHint = document.getElementById('micHint');
     const brandTag = document.getElementById('brandTag');
 
-    // Файлы анимаций
+        // Файлы анимаций
     const SPRITES = {
       idle: 'idle.gif',
       talk: 'talk.gif',
       eat: 'eat.gif',
-      dance: 'dance.gif',
-      sleep: 'sleep.gif'
+      cry: 'cry.gif',
+      mad: 'mad.gif',
+      offense: 'offense.gif',
+      laugh: 'laugh.gif',
+      sleep: 'idle.gif' // пока нет sleep, ставим idle
     };
 
     const LABELS = {
@@ -141,15 +144,32 @@
       thinking: 'Джем думает...',
       speaking: 'Джем говорит...',
       eating: 'Джем жуёт сэндвич 🥪',
-      dancing: 'Джем танцует ✨🐾',
-      sleeping: 'Джем сладко спит... 💤'
+      laugh: 'Джем смеётся! 😂',
+      mad: 'Джем злится! 💢',
+      offense: 'Джем обиделся... 🥺',
+      cry: 'Джем плачет 😭',
+      sleep: 'Джем сладко спит... 💤'
     };
 
-    // Фолбэк на статический арт, если гифка еще не загружена в репозиторий
-    function handleImageFallback(img) {
-      if (!img.src.endsWith('wolf.png')) {
-        img.src = 'wolf.png';
+    function setSpriteState(state) {
+      currentEmotion = state;
+      mascotBox.className = 'mascot-box ' + state;
+      statusText.innerText = LABELS[state] || 'Джем 🐾';
+
+      const targetSprite = SPRITES[state] || SPRITES.idle;
+      if (wolfSprite.getAttribute('src') !== targetSprite) {
+        wolfSprite.src = targetSprite;
       }
+    }
+
+    // Распознавание эмоции по ответу Gemini
+    function detectEmotionFromText(text) {
+      const l = text.toLowerCase();
+      if (/ха-ха|хи-хи|смешн|ахах|ржу|лол|весел/.test(l)) return 'laugh';
+      if (/зл(ю|и|е)|бес(и|ит)|фу|отстань|хватит|ужас|раздраж/.test(l)) return 'mad';
+      if (/обид|дур(ак|а)|вредн|ну и ладно|бука/.test(l)) return 'offense';
+      if (/плач|слез|рыда|груст|жаль|печал|тоск/.test(l)) return 'cry';
+      return 'idle';
     }
 
     function setSpriteState(state) {
@@ -313,15 +333,17 @@
     }
 
     // Озвучка ответа и включение анимации рта
-    function speak(text) {
+        function speak(text) {
       resetActivity();
       const txt = cleanForSpeech(text);
       chatBubble.innerText = txt;
       setSpriteState('talk');
 
+      const targetEmotion = detectEmotionFromText(text);
+
       const vMode = localStorage.getItem('jam_voice') || 'neural_female';
       const onEnd = () => {
-        setSpriteState('idle');
+        setSpriteState(targetEmotion);
         resetActivity();
       };
 
