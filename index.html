@@ -553,7 +553,7 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: `Произнеси вслух (только этот текст без вступлений): ${txt}` }] }],
+                contents: [{ parts: [{ text: txt }] }],
                 generationConfig: {
                   responseModalities: ["AUDIO"],
                   speechConfig: {
