@@ -6,9 +6,9 @@
   <title>Джем</title>
   <link rel="manifest" href="manifest.json">
   <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
   </script>
   <style>
     :root {
@@ -145,7 +145,7 @@
       laugh: 'laugh.gif'
     };
 
-    // ФОНОВЫЙ ПРЕДЗАГРУЗЧИК ГИФОК В КЭШ ТЕЛЕФОНА
+    // Предзагрузка всех анимаций в память смартфона
     const cachedImages = {};
     function preloadAllSprites() {
       Object.entries(SPRITES).forEach(([key, url]) => {
@@ -186,15 +186,16 @@
 
     function resetActivity() {
       lastAction = Date.now();
-      if (!['talk', 'listening', 'think'].includes(currentEmotion)) {
+      // Не сбрасываем в idle, если волчонок прямо сейчас выражает эмоцию
+      const activeEmotions = ['talk', 'listening', 'think', 'biceps', 'blush', 'mad', 'cry', 'offended', 'laugh'];
+      if (!activeEmotions.includes(currentEmotion)) {
         setSpriteState('idle');
       }
     }
 
-    // Таймер скуки без рассинхрона
+    // Таймер скуки при долгом молчании
     setInterval(() => {
-      if (isListening || (synth && synth.speaking) || !audioPlayer.paused || ['think', 'talk', 'listening'].includes(currentEmotion)) {
-        lastAction = Date.now();
+      if (isListening || (synth && synth.speaking) || !audioPlayer.paused || ['think', 'talk', 'listening', 'biceps', 'blush', 'mad', 'cry', 'offended', 'laugh'].includes(currentEmotion)) {
         return;
       }
 
@@ -228,13 +229,21 @@
       const r = replyTxt.toLowerCase();
       const combined = u + ' ' + r;
 
-      if (/дурак|тупой|идиот|плохой|отстань|заткнись|бесишь|отвали|надоел|отвратительн/.test(u)) return 'cry';
-      if (/вредный|ну и сиди|бука|обид|не буду с тобой/.test(u)) return 'offended';
-      if (/бесит|злит|раздражает|ужас|кошмар|жесть|ненавижу|сволоч|гад|злюсь|бесяв/.test(combined)) return 'mad';
-      if (/молодец|умница|красавчик|лучший|классный|супер|спасибо|обожаю|сильный|крутой|милый|хороший/.test(u)) {
+      if (/дурак|тупой|идиот|плохой|отстань|заткнись|бесишь|отвали|надоел|отвратительн|глупый|бесполезн/.test(u)) {
+        return 'cry';
+      }
+      if (/вредный|ну и сиди|бука|обид|не буду с тобой|вредитель|жадина/.test(u)) {
+        return 'offended';
+      }
+      if (/бесит|злит|раздражает|ужас|кошмар|жесть|ненавижу|сволоч|гад|злюсь|бесяв|взбесил|злой|злая|порву|достало|бесят/.test(combined)) {
+        return 'mad';
+      }
+      if (/молодец|умница|красавчик|лучший|классный|супер|спасибо|обожаю|сильный|крутой|милый|хороший|золотце|люблю/.test(u)) {
         return Math.random() > 0.5 ? 'biceps' : 'blush';
       }
-      if (/ахах|ха-ха|хи-хи|лол|смешн|ржу|прикол/.test(combined)) return 'laugh';
+      if (/ахах|ха-ха|хи-хи|лол|смешн|ржу|прикол|кек/.test(combined)) {
+        return 'laugh';
+      }
 
       return 'idle';
     }
@@ -351,7 +360,7 @@
     }
 
     function speak(text, reactionEmotion = 'idle') {
-      resetActivity();
+      lastAction = Date.now();
       const txt = cleanText(text);
       chatBubble.innerText = txt;
       setSpriteState('talk');
@@ -363,11 +372,22 @@
         if (isFinished) return;
         isFinished = true;
         if (speakFallbackTimeout) clearTimeout(speakFallbackTimeout);
+
+        // Включаем целевую эмоцию реакции
         setSpriteState(reactionEmotion);
-        resetActivity();
+        lastAction = Date.now();
+
+        // Держим эмоцию 4.5 секунды, затем возвращаем в idle
+        if (reactionEmotion !== 'idle') {
+          setTimeout(() => {
+            if (currentEmotion === reactionEmotion) {
+              setSpriteState('idle');
+              lastAction = Date.now();
+            }
+          }, 4500);
+        }
       };
 
-      // Динамический таймер безопасности: закрывает рот ровно к концу фразы
       const approxDurationMs = Math.max(2000, Math.round((txt.length / 13) * 1000) + 1200);
       speakFallbackTimeout = setTimeout(finish, approxDurationMs);
 
