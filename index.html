@@ -116,7 +116,7 @@
     let recognition = null;
     let synth = window.speechSynthesis;
     let audioPlayer = new Audio();
-    let speakFallbackTimeout = null;
+    let speechTimer = null;
     
     let lastAction = Date.now();
     let currentEmotion = 'idle';
@@ -145,7 +145,6 @@
       laugh: 'laugh.gif'
     };
 
-    // Предзагрузка всех анимаций в память смартфона
     const cachedImages = {};
     function preloadAllSprites() {
       Object.entries(SPRITES).forEach(([key, url]) => {
@@ -186,14 +185,13 @@
 
     function resetActivity() {
       lastAction = Date.now();
-      // Не сбрасываем в idle, если волчонок прямо сейчас выражает эмоцию
       const activeEmotions = ['talk', 'listening', 'think', 'biceps', 'blush', 'mad', 'cry', 'offended', 'laugh'];
       if (!activeEmotions.includes(currentEmotion)) {
         setSpriteState('idle');
       }
     }
 
-    // Таймер скуки при долгом молчании
+    // Таймер скуки
     setInterval(() => {
       if (isListening || (synth && synth.speaking) || !audioPlayer.paused || ['think', 'talk', 'listening', 'biceps', 'blush', 'mad', 'cry', 'offended', 'laugh'].includes(currentEmotion)) {
         return;
@@ -229,21 +227,13 @@
       const r = replyTxt.toLowerCase();
       const combined = u + ' ' + r;
 
-      if (/дурак|тупой|идиот|плохой|отстань|заткнись|бесишь|отвали|надоел|отвратительн|глупый|бесполезн/.test(u)) {
-        return 'cry';
-      }
-      if (/вредный|ну и сиди|бука|обид|не буду с тобой|вредитель|жадина/.test(u)) {
-        return 'offended';
-      }
-      if (/бесит|злит|раздражает|ужас|кошмар|жесть|ненавижу|сволоч|гад|злюсь|бесяв|взбесил|злой|злая|порву|достало|бесят/.test(combined)) {
-        return 'mad';
-      }
+      if (/дурак|тупой|идиот|плохой|отстань|заткнись|бесишь|отвали|надоел|отвратительн|глупый|бесполезн/.test(u)) return 'cry';
+      if (/вредный|ну и сиди|бука|обид|не буду с тобой|вредитель|жадина/.test(u)) return 'offended';
+      if (/бесит|злит|раздражает|ужас|кошмар|жесть|ненавижу|сволоч|гад|злюсь|бесяв|взбесил|злой|злая|порву|достало|бесят/.test(combined)) return 'mad';
       if (/молодец|умница|красавчик|лучший|классный|супер|спасибо|обожаю|сильный|крутой|милый|хороший|золотце|люблю/.test(u)) {
         return Math.random() > 0.5 ? 'biceps' : 'blush';
       }
-      if (/ахах|ха-ха|хи-хи|лол|смешн|ржу|прикол|кек/.test(combined)) {
-        return 'laugh';
-      }
+      if (/ахах|ха-ха|хи-хи|лол|смешн|ржу|прикол|кек/.test(combined)) return 'laugh';
 
       return 'idle';
     }
@@ -291,7 +281,7 @@
       if (!recognition) { alert('Открой сайт через мобильный Chrome!'); return; }
       if (synth && synth.speaking) synth.cancel();
       if (!audioPlayer.paused) { audioPlayer.pause(); audioPlayer.currentTime = 0; }
-      if (speakFallbackTimeout) clearTimeout(speakFallbackTimeout);
+      if (speechTimer) clearTimeout(speechTimer);
 
       if (isListening) {
         recognition.stop();
@@ -365,19 +355,19 @@
       chatBubble.innerText = txt;
       setSpriteState('talk');
 
-      if (speakFallbackTimeout) clearTimeout(speakFallbackTimeout);
+      if (speechTimer) clearTimeout(speechTimer);
 
-      let isFinished = false;
-      const finish = () => {
-        if (isFinished) return;
-        isFinished = true;
-        if (speakFallbackTimeout) clearTimeout(speakFallbackTimeout);
+      let finished = false;
+      const endSpeech = () => {
+        if (finished) return;
+        finished = true;
+        if (speechTimer) clearTimeout(speechTimer);
 
-        // Включаем целевую эмоцию реакции
+        // Переключаем в реакцию (хвастовство, смущение, злость и т.д.)
         setSpriteState(reactionEmotion);
         lastAction = Date.now();
 
-        // Держим эмоцию 4.5 секунды, затем возвращаем в idle
+        // Держим реакцию 4.5 секунды, затем уходим в idle
         if (reactionEmotion !== 'idle') {
           setTimeout(() => {
             if (currentEmotion === reactionEmotion) {
@@ -388,8 +378,8 @@
         }
       };
 
-      const approxDurationMs = Math.max(2000, Math.round((txt.length / 13) * 1000) + 1200);
-      speakFallbackTimeout = setTimeout(finish, approxDurationMs);
+      // Жёсткий расчёт времени речи по длине фразы (~12.5 символов в сек)
+      const exactDurationMs = Math.max(1800, Math.round((txt.length / 12.5) * 1000));
 
       const vMode = localStorage.getItem('jam_voice') || 'neural_female';
       if (vMode.startsWith('neural')) {
@@ -398,19 +388,16 @@
         audioPlayer.currentTime = 0;
         audioPlayer.src = `https://api.streamelements.com/kappa/v2/speech?voice=${vName}&text=${encodeURIComponent(txt)}`;
         
-        audioPlayer.onplay = () => setSpriteState('talk');
-        audioPlayer.onended = finish;
-        audioPlayer.onerror = () => fallbackSpeak(txt, finish);
-        
-        audioPlayer.ontimeupdate = () => {
-          if (audioPlayer.duration && audioPlayer.currentTime >= audioPlayer.duration - 0.25) {
-            finish();
-          }
+        audioPlayer.onplay = () => {
+          setSpriteState('talk');
+          // Таймер стартует ТОЧНО когда начался реальный звук
+          speechTimer = setTimeout(endSpeech, exactDurationMs);
         };
-
-        audioPlayer.play().catch(() => fallbackSpeak(txt, finish));
+        audioPlayer.onended = endSpeech;
+        audioPlayer.onerror = () => fallbackSpeak(txt, endSpeech);
+        audioPlayer.play().catch(() => fallbackSpeak(txt, endSpeech));
       } else {
-        fallbackSpeak(txt, finish);
+        fallbackSpeak(txt, endSpeech);
       }
     }
 
