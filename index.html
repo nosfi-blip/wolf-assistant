@@ -106,8 +106,8 @@
           <option value="Charon">Gemini: Charon (Спокойный мужской)</option>
           <option value="Aoede">Gemini: Aoede (Живой женский)</option>
           <option value="Kore">Gemini: Kore (Мягкий женский)</option>
-          <option value="neural_female">Светлана (Системный)</option>
-          <option value="neural_male">Дмитрий (Системный)</option>
+          <option value="neural_male">Дмитрий (Быстрый без задержки)</option>
+          <option value="neural_female">Светлана (Быстрый без задержки)</option>
         </select>
       </div>
       <button class="btn btn-save" onclick="saveSettings()">Сохранить</button>
@@ -122,7 +122,6 @@
     let isSpeaking = false;
     let recognition = null;
     
-    // Web Audio API контекст (не блокируется мобильными браузерами после разблокировки кликом)
     let audioCtx = null;
     let currentSource = null;
     const currentAudio = new Audio();
@@ -168,7 +167,6 @@
     }
     window.addEventListener('load', preloadAllSprites);
 
-    // Железобетонная разблокировка звука при касании экрана
     function initAndUnlockAudio() {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!audioCtx && AudioContextClass) {
@@ -177,7 +175,6 @@
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
-      // Пустой короткий импульс для активации динамика на Android/iOS
       if (audioCtx) {
         const buffer = audioCtx.createBuffer(1, 1, 22050);
         const source = audioCtx.createBufferSource();
@@ -450,6 +447,7 @@
           localStorage.setItem('jam_chat_history', JSON.stringify(chatHistory));
           const cleanReply = cleanText(reply);
           const reaction = detectContextEmotion(query, cleanReply);
+          // Передаем в озвучку (пока готовится голос, Джем продолжает думать, не показывая текст заранее)
           await speak(cleanReply, reaction);
         } else {
           isThinking = false;
@@ -462,7 +460,6 @@
       }
     }
 
-    // Воспроизведение PCM/WAV аудио от Gemini через Web Audio API
     async function playGeminiAudio(base64Data, mimeType, onPlay, onEnd) {
       initAndUnlockAudio();
       const binaryString = atob(base64Data);
@@ -472,7 +469,6 @@
         bytes[i] = binaryString.charCodeAt(i);
       }
 
-      // Если сервер прислал сырой PCM (audio/pcm;rate=24000)
       if (!mimeType || mimeType.includes('pcm') || mimeType.includes('L16')) {
         const rateMatch = mimeType ? mimeType.match(/rate=(\d+)/) : null;
         const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
@@ -490,7 +486,6 @@
         onPlay();
         source.start(0);
       } else {
-        // Если пришел готовый контейнер (wav/mp3/ogg)
         const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
         const source = audioCtx.createBufferSource();
         source.buffer = audioBuffer;
@@ -503,24 +498,31 @@
     }
 
     async function speak(txt, reactionEmotion = 'idle') {
-      isThinking = false;
       resetActivityTimer();
       stopCurrentSpeech();
       if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
 
       if (!txt) {
+        isThinking = false;
         setSpriteState('idle');
         return;
       }
 
-      isSpeaking = true;
-      chatBubble.innerText = txt;
-      chatBubble.scrollTop = chatBubble.scrollHeight;
-
       let finished = false;
+
+      // Показываем текст и включаем анимацию разговора ТОЛЬКО в момент старта звука
+      const onSpeechStart = () => {
+        isThinking = false;
+        isSpeaking = true;
+        chatBubble.innerText = txt;
+        chatBubble.scrollTop = chatBubble.scrollHeight;
+        setSpriteState('talk');
+      };
+
       const onSpeechEnd = () => {
         if (finished) return;
         finished = true;
+        isThinking = false;
         isSpeaking = false;
         resetActivityTimer();
 
@@ -530,7 +532,7 @@
             if (!isSpeaking && !isListening && !isThinking && tapCount === 0) {
               setSpriteState('idle');
             }
-          }, 4000);
+          }, 4500);
         } else {
           setSpriteState('idle');
         }
@@ -538,21 +540,20 @@
 
       const vMode = localStorage.getItem('jam_voice') || 'Puck';
       const apiKey = localStorage.getItem('gemini_api_key');
-      const userModel = localStorage.getItem('gemini_model') || 'gemini-3.5-flash-lite';
 
-      // Резервный запуск через системный синтезатор браузера + Google Translate TTS
+      // Быстрая системная озвучка (срабатывает мгновенно)
       const fallbackSpeak = () => {
-        // Сначала пробуем встроенный синтезатор телефона/браузера
         if ('speechSynthesis' in window) {
           window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance(txt);
           u.lang = 'ru-RU';
-          u.rate = 1.05;
+          const isMale = (vMode === 'neural_male' || vMode === 'Puck' || vMode === 'Fenrir' || vMode === 'Charon');
+          u.rate = 1.06;
+          u.pitch = isMale ? 0.85 : 1.05;
 
           const voices = window.speechSynthesis.getVoices();
           const ruVoices = voices.filter(v => v.lang && v.lang.toLowerCase().includes('ru'));
           if (ruVoices.length > 0) {
-            const isMale = (vMode === 'neural_male' || vMode === 'Puck' || vMode === 'Fenrir' || vMode === 'Charon');
             const preferred = ruVoices.find(v => isMale 
               ? /dmitry|дмитрий|pavel|павел|male|yuri|юрий/i.test(v.name)
               : /svetlana|светлана|irina|ирина|female|google/i.test(v.name)
@@ -563,44 +564,47 @@
           let started = false;
           u.onstart = () => {
             started = true;
-            setSpriteState('talk');
+            onSpeechStart();
           };
           u.onend = onSpeechEnd;
           u.onerror = onSpeechEnd;
 
           window.speechSynthesis.speak(u);
 
-          // На Android speechSynthesis иногда молчит — проверяем через 600мс
           setTimeout(() => {
             if (!started && !finished) {
               window.speechSynthesis.cancel();
-              // Запускаем безотказный Google TTS поток
               const gUrl = `https://translate.googleapis.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(txt.slice(0, 200))}&tl=ru&client=tw-ob`;
               currentAudio.src = gUrl;
-              currentAudio.onplay = () => setSpriteState('talk');
+              currentAudio.onplay = onSpeechStart;
               currentAudio.onended = onSpeechEnd;
-              currentAudio.onerror = onSpeechEnd;
-              currentAudio.play().catch(onSpeechEnd);
+              currentAudio.onerror = () => {
+                onSpeechStart();
+                setTimeout(onSpeechEnd, 2500);
+              };
+              currentAudio.play().catch(() => {
+                onSpeechStart();
+                setTimeout(onSpeechEnd, 2500);
+              });
             }
-          }, 600);
+          }, 700);
         } else {
-          onSpeechEnd();
+          onSpeechStart();
+          setTimeout(onSpeechEnd, 2500);
         }
       };
 
-      // Если выбран родной голос Gemini (Puck, Fenrir, Charon, Aoede, Kore)
       const isGeminiVoice = ['Puck', 'Fenrir', 'Charon', 'Aoede', 'Kore'].includes(vMode);
 
       if (isGeminiVoice && apiKey) {
-        // Пробуем получить живое аудио от Gemini API
-        const ttsModels = [userModel, 'gemini-2.5-flash-preview-tts'];
-        for (const m of ttsModels) {
+        // Стучимся напрямую в голосовую модель без потери времени на текстовую
+        for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: `Произнеси вслух на русском языке с выражением (без лишних слов, только эту фразу): ${txt}` }] }],
+                contents: [{ parts: [{ text: `Произнеси с выражением: ${txt}` }] }],
                 generationConfig: {
                   responseModalities: ["AUDIO"],
                   speechConfig: {
@@ -620,18 +624,17 @@
               await playGeminiAudio(
                 audioPart.inlineData.data,
                 audioPart.inlineData.mimeType,
-                () => setSpriteState('talk'),
+                onSpeechStart,
                 onSpeechEnd
               );
-              return; // Успешно заговорил голосом Gemini!
+              return;
             }
-          } catch (e) {
-            // Если конкретная модель не поддержала AUDIO, пробуем следующую
-          }
+          } catch (e) {}
+          // Если с первой попытки словили секундный лимит API, ждем 800мс и пробуем еще раз
+          if (attempt === 0) await new Promise(r => setTimeout(r, 800));
         }
       }
 
-      // Если выбран системный голос (Светлана/Дмитрий) или модель не отдала AUDIO
       fallbackSpeak();
     }
 
