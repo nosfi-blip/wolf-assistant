@@ -3,51 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Джем — Волчонок-ассистент</title>
+  <title>Джем</title>
   <style>
     :root {
-      --bg: #0b0f19;
-      --card-bg: #141b28;
-      --accent: #7aa2f7;
-      --accent-glow: rgba(122, 162, 247, 0.45);
-      --text: #c0caf5;
-      --text-dim: #7982a9;
-      --border: #222c3f;
+      /* Цвет фона взят строго с пипетки (HSB 244, 85%, 24%) */
+      --bg: #0c0a3d;
+      --card-bg: rgba(22, 20, 78, 0.85);
+      --accent: #8b9dff;
+      --accent-glow: rgba(139, 157, 255, 0.45);
+      --text: #e0e4ff;
+      --text-dim: #9aa2dc;
+      --border: rgba(139, 157, 255, 0.22);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; background-image: radial-gradient(circle at 50% 25%, #182338 0%, #0b0f19 80%); }
-    header { padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: rgba(20, 27, 40, 0.9); backdrop-filter: blur(10px); z-index: 10; }
+    body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+    header { padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: rgba(12, 10, 61, 0.9); backdrop-filter: blur(12px); z-index: 10; }
     .brand { font-weight: 800; font-size: 1.15rem; color: #fff; display: flex; align-items: center; gap: 8px; }
-    .brand-tag { font-size: 0.65rem; background: linear-gradient(135deg, #bb9af7, #7aa2f7); color: #0b0f19; padding: 2px 7px; border-radius: 10px; font-weight: 800; }
+    .brand-tag { font-size: 0.65rem; background: var(--accent); color: #0c0a3d; padding: 2px 7px; border-radius: 10px; font-weight: 800; }
     .icon-btn { background: none; border: none; color: var(--text); font-size: 1.3rem; cursor: pointer; }
     
-    .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; position: relative; }
-    .mascot-box { width: 270px; height: 320px; position: relative; display: flex; justify-content: center; align-items: center; }
-    .wolf-sprite { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.65)); transition: transform 0.25s ease; }
+    .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 16px; position: relative; }
     
-    .thinking .wolf-sprite { animation: thinkPulse 1s ease-in-out infinite alternate; }
-    .listening .wolf-sprite { transform: scale(1.04); filter: drop-shadow(0 0 20px var(--accent-glow)); }
-    
-    @keyframes thinkPulse { 0% { transform: scale(0.98); } 100% { transform: scale(1.02); } }
+    .mascot-box { 
+      width: 280px; 
+      height: 380px; 
+      position: relative; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
+      /* Растушевка сглаживает возможные стыки на фоне */
+      -webkit-mask-image: radial-gradient(circle at 50% 50%, black 72%, transparent 100%);
+      mask-image: radial-gradient(circle at 50% 50%, black 72%, transparent 100%);
+    }
+    .wolf-sprite { width: 100%; height: 100%; object-fit: contain; }
 
-    .status-text { font-size: 0.85rem; color: var(--accent); margin-top: 10px; height: 18px; font-weight: 700; text-transform: uppercase; text-align: center; }
-    .chat-bubble { margin-top: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 14px 18px; max-width: 90%; min-height: 52px; max-height: 150px; overflow-y: auto; font-size: 0.95rem; line-height: 1.45; text-align: center; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); }
+    .status-text { font-size: 0.85rem; color: var(--accent); margin-top: 6px; height: 18px; font-weight: 700; text-transform: uppercase; text-align: center; }
+    .chat-bubble { margin-top: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 12px 16px; max-width: 90%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 0.95rem; line-height: 1.4; text-align: center; backdrop-filter: blur(8px); }
 
-    .controls { padding: 16px; display: flex; flex-direction: column; align-items: center; background: rgba(20, 27, 40, 0.9); border-top: 1px solid var(--border); backdrop-filter: blur(10px); gap: 10px; }
-    .mic-button { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #7aa2f7, #6088ff); border: none; color: #0b0f19; font-size: 1.85rem; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 6px 20px var(--accent-glow); transition: all 0.25s; }
-    .mic-button.active { background: linear-gradient(135deg, #f7768e, #ff4065); transform: scale(1.1); box-shadow: 0 0 25px rgba(247, 118, 142, 0.8); }
+    .controls { padding: 16px; display: flex; flex-direction: column; align-items: center; background: rgba(12, 10, 61, 0.9); border-top: 1px solid var(--border); backdrop-filter: blur(12px); gap: 8px; }
+    .mic-button { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #8b9dff, #6272ff); border: none; color: #0c0a3d; font-size: 1.8rem; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 18px var(--accent-glow); transition: all 0.2s; }
+    .mic-button.active { background: #ff5c7c; transform: scale(1.08); box-shadow: 0 0 22px rgba(255, 92, 124, 0.7); }
     .mic-hint { font-size: 0.8rem; color: var(--text-dim); }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 100; padding: 20px; }
     .modal-overlay.open { display: flex; }
-    .modal { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 20px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
-    .modal h2 { font-size: 1.2rem; margin-bottom: 14px; color: #fff; }
+    .modal { background: #16144e; border: 1px solid var(--border); border-radius: 18px; padding: 20px; width: 100%; max-width: 380px; }
+    .modal h2 { font-size: 1.15rem; margin-bottom: 14px; color: #fff; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; }
-    .form-control { width: 100%; padding: 10px 12px; background: #0b0f19; border: 1px solid var(--border); border-radius: 10px; color: #fff; font-size: 0.85rem; outline: none; }
-    .btn { width: 100%; padding: 11px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; margin-top: 8px; }
-    .btn-save { background: var(--accent); color: #0b0f19; }
-    .btn-clear { background: rgba(247, 118, 142, 0.15); color: #f7768e; border: 1px solid #f7768e; }
+    .form-control { width: 100%; padding: 10px 12px; background: #0c0a3d; border: 1px solid var(--border); border-radius: 10px; color: #fff; font-size: 0.85rem; outline: none; }
+    .btn { width: 100%; padding: 10px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; margin-top: 8px; }
+    .btn-save { background: var(--accent); color: #0c0a3d; }
+    .btn-clear { background: rgba(255, 92, 124, 0.15); color: #ff5c7c; border: 1px solid #ff5c7c; }
     .btn-close { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
   </style>
 </head>
@@ -56,15 +63,14 @@
   <header>
     <div class="brand">
       <span>Джем</span>
-      <span class="brand-tag" id="brandTag">Gemini 3.8</span>
+      <span class="brand-tag" id="brandTag">Gemini</span>
     </div>
     <button class="icon-btn" onclick="openSettings()">⚙️</button>
   </header>
 
   <main class="stage">
-    <div class="mascot-box idle" id="mascotBox">
-      <!-- Анимированный спрайт (автоматически подменяется на idle.gif, talk.gif и т.д.) -->
-      <img class="wolf-sprite" id="wolfSprite" src="idle.gif" alt="Джем" onerror="handleImageFallback(this)">
+    <div class="mascot-box" id="mascotBox">
+      <img class="wolf-sprite" id="wolfSprite" src="idle.gif" alt="Джем">
     </div>
 
     <div class="status-text" id="statusText">Привет! Я Джем 🐾</div>
@@ -76,30 +82,25 @@
     <div class="mic-hint" id="micHint">Нажми и говори</div>
   </footer>
 
-  <!-- Окно настроек -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
-      <h2>Настройки Джема</h2>
-
+      <h2>Настройки</h2>
       <div class="form-group">
-        <label>Google Gemini API Key:</label>
-        <input type="password" id="apiKeyInput" class="form-control" placeholder="Вставьте ваш API-ключ">
+        <label>API Key:</label>
+        <input type="password" id="apiKeyInput" class="form-control" placeholder="Вставьте ключ">
       </div>
-
       <div class="form-group">
-        <label>Модель Gemini:</label>
+        <label>Модель:</label>
         <input type="text" id="modelInput" class="form-control" value="gemini-3.8-flash">
       </div>
-
       <div class="form-group">
-        <label>Голос озвучки:</label>
+        <label>Озвучка:</label>
         <select id="voiceSelect" class="form-control">
-          <option value="neural_female">Онлайн: Светлана (Нейросеть)</option>
-          <option value="neural_male">Онлайн: Дмитрий (Нейросеть)</option>
-          <option value="system">Системный синтезатор телефона</option>
+          <option value="neural_female">Светлана (нейросеть)</option>
+          <option value="neural_male">Дмитрий (нейросеть)</option>
+          <option value="system">Системный синтезатор</option>
         </select>
       </div>
-
       <button class="btn btn-save" onclick="saveSettings()">Сохранить</button>
       <button class="btn btn-clear" onclick="clearMemory()">Очистить память диалога</button>
       <button class="btn btn-close" onclick="closeSettings()">Закрыть</button>
@@ -114,8 +115,6 @@
     
     let lastAction = Date.now();
     let currentEmotion = 'idle';
-
-    // ПАМЯТЬ ДИАЛОГА (история сообщений)
     let chatHistory = JSON.parse(localStorage.getItem('jam_chat_history') || '[]');
 
     const mascotBox = document.getElementById('mascotBox');
@@ -126,95 +125,105 @@
     const micHint = document.getElementById('micHint');
     const brandTag = document.getElementById('brandTag');
 
-        // Файлы анимаций
+    // Полная карта всех твоих файлов из репозитория
     const SPRITES = {
       idle: 'idle.gif',
       talk: 'talk.gif',
+      think: 'think.gif',
+      biceps: 'biceps.gif',
+      blush: 'blush.gif',
       eat: 'eat.gif',
+      dance: 'dance.gif',
+      sleep: 'sleep.gif',
       cry: 'cry.gif',
       mad: 'mad.gif',
-      offense: 'offense.gif',
-      laugh: 'laugh.gif',
-      sleep: 'idle.gif' // пока нет sleep, ставим idle
+      offended: 'offended.gif',
+      laugh: 'laugh.gif'
     };
 
     const LABELS = {
-      idle: 'Привет! Я Джем 🐾',
-      listening: 'Джем слушает ушком 🐾',
-      thinking: 'Джем думает...',
-      speaking: 'Джем говорит...',
-      eating: 'Джем жуёт сэндвич 🥪',
-      laugh: 'Джем смеётся! 😂',
-      mad: 'Джем злится! 💢',
-      offense: 'Джем обиделся... 🥺',
+      idle: 'Джем слушает 🐾',
+      listening: 'Слушаю тебя ушком 🐾',
+      think: 'Джем соображает...',
+      talk: 'Джем говорит...',
+      biceps: 'Самый лучший помощник! 💪🐾',
+      blush: 'Ой, смущаешь... 😳',
+      eat: 'Джем жуёт сэндвич 🥪',
+      dance: 'Лапками топ-топ! 🎵',
+      sleep: 'Джем сладко спит... 💤',
       cry: 'Джем плачет 😭',
-      sleep: 'Джем сладко спит... 💤'
+      mad: 'Джем злится! 💢',
+      offended: 'Джем обиделся... 🥺',
+      laugh: 'Джем смеётся! 😂'
     };
 
     function setSpriteState(state) {
       currentEmotion = state;
-      mascotBox.className = 'mascot-box ' + state;
       statusText.innerText = LABELS[state] || 'Джем 🐾';
-
-      const targetSprite = SPRITES[state] || SPRITES.idle;
-      if (wolfSprite.getAttribute('src') !== targetSprite) {
-        wolfSprite.src = targetSprite;
-      }
-    }
-
-    // Распознавание эмоции по ответу Gemini
-    function detectEmotionFromText(text) {
-      const l = text.toLowerCase();
-      if (/ха-ха|хи-хи|смешн|ахах|ржу|лол|весел/.test(l)) return 'laugh';
-      if (/зл(ю|и|е)|бес(и|ит)|фу|отстань|хватит|ужас|раздраж/.test(l)) return 'mad';
-      if (/обид|дур(ак|а)|вредн|ну и ладно|бука/.test(l)) return 'offense';
-      if (/плач|слез|рыда|груст|жаль|печал|тоск/.test(l)) return 'cry';
-      return 'idle';
-    }
-
-    function setSpriteState(state) {
-      currentEmotion = state;
-      mascotBox.className = 'mascot-box ' + state;
-      statusText.innerText = LABELS[state] || 'Джем 🐾';
-
-      // Переключаем кадр/гифку
-      const targetSprite = SPRITES[state] || SPRITES.idle;
-      if (wolfSprite.getAttribute('src') !== targetSprite) {
-        wolfSprite.src = targetSprite;
+      const target = SPRITES[state] || SPRITES.idle;
+      if (!wolfSprite.src.endsWith(target)) {
+        wolfSprite.src = target;
       }
     }
 
     function resetActivity() {
       lastAction = Date.now();
-      if (!['speaking', 'listening', 'thinking'].includes(currentEmotion)) {
+      if (!['talk', 'listening', 'think'].includes(currentEmotion)) {
         setSpriteState('idle');
       }
     }
 
-    // Таймер бездействия
+    // Автоматические действия при бездействии
     setInterval(() => {
-      if (isListening || (synth && synth.speaking) || !audioPlayer.paused || ['thinking', 'speaking', 'listening'].includes(currentEmotion)) {
+      if (isListening || (synth && synth.speaking) || !audioPlayer.paused || ['think', 'talk', 'listening'].includes(currentEmotion)) {
         lastAction = Date.now();
         return;
       }
 
       const sec = Math.floor((Date.now() - lastAction) / 1000);
 
-      if (sec >= 75 && currentEmotion !== 'sleep') {
+      if (sec >= 90 && currentEmotion !== 'sleep') {
         setSpriteState('sleep');
         chatBubble.innerText = 'Снится сахарная косточка... 💤';
-      } else if (sec >= 50 && sec < 75 && currentEmotion !== 'dance') {
+      } else if (sec >= 60 && sec < 90 && currentEmotion !== 'dance') {
         setSpriteState('dance');
-        chatBubble.innerText = 'Лапками топ-топ! Танцуем! 🎵';
-      } else if (sec >= 25 && sec < 50 && currentEmotion !== 'eat') {
+        chatBubble.innerText = 'Лапками топ-топ! Потанцуем? 🎵';
+      } else if (sec >= 35 && sec < 60 && currentEmotion !== 'eat') {
         setSpriteState('eat');
         chatBubble.innerText = 'Хрум-хрум! Вкусный сэндвич! 🥪';
-      } else if (sec >= 12 && sec < 25 && currentEmotion === 'idle') {
-        statusText.innerText = 'Джем скучает...';
+      } else if (sec >= 15 && sec < 35 && currentEmotion === 'idle') {
+        setSpriteState('biceps');
+        chatBubble.innerText = 'Я тут, если понадоблюсь! Самый сильный помощник 💪';
       }
     }, 1000);
 
-    // Загрузка сохранённых настроек
+    // Распознавание эмоционального контекста фразы
+    function detectContextEmotion(userTxt, replyTxt) {
+      const u = userTxt.toLowerCase();
+      const r = replyTxt.toLowerCase();
+      const combined = u + ' ' + r;
+
+      // Ругань в сторону волка
+      if (/дурак|тупой|идиот|плохой|отстань|заткнись|бесишь|отвали|надоел|отвратительн/.test(u)) return 'cry';
+
+      // Обидка
+      if (/вредный|ну и сиди|бука|обид|не буду с тобой/.test(u)) return 'offended';
+
+      // Совместная злость / бесячие вещи
+      if (/бесит|злит|раздражает|ужас|кошмар|жесть|ненавижу|сволоч|гад|злюсь|бесяв/.test(combined)) return 'mad';
+
+      // Похвала, комплименты, сила
+      if (/молодец|умница|красавчик|лучший|классный|супер|спасибо|обожаю|сильный|крутой|милый|хороший/.test(u)) {
+        return Math.random() > 0.5 ? 'biceps' : 'blush';
+      }
+
+      // Смех
+      if (/ахах|ха-ха|хи-хи|лол|смешн|ржу|прикол/.test(combined)) return 'laugh';
+
+      return 'idle';
+    }
+
+    // Инициализация
     document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
     const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
     document.getElementById('modelInput').value = savedModel;
@@ -234,13 +243,13 @@
         isListening = true;
         micBtn.classList.add('active');
         micHint.innerText = 'Слушаю тебя...';
-        setSpriteState('listening');
+        setSpriteState('idle'); // дергает ушком, слушает
       };
       recognition.onresult = (e) => {
         resetActivity();
         const text = e.results[0][0].transcript;
         chatBubble.innerText = 'Ты: ' + text;
-        askGeminiWithMemory(text);
+        askGemini(text);
       };
       recognition.onerror = () => {
         isListening = false;
@@ -256,10 +265,9 @@
 
     function handleMicClick() {
       resetActivity();
-      if (!recognition) { alert('Открой через Chrome на телефоне!'); return; }
+      if (!recognition) { alert('Открой сайт через мобильный Chrome!'); return; }
       if (synth && synth.speaking) synth.cancel();
       if (!audioPlayer.paused) { audioPlayer.pause(); audioPlayer.currentTime = 0; }
-
       if (isListening) {
         recognition.stop();
       } else {
@@ -267,7 +275,7 @@
       }
     }
 
-    function cleanForSpeech(raw) {
+    function cleanText(raw) {
       return (raw || '')
         .replace(/\*[^*]*\*/g, '')
         .replace(/\([^\)]*\)/g, '')
@@ -278,85 +286,84 @@
         .trim();
     }
 
-    // Запрос к Gemini с сохранением всей цепочки диалога
-    async function askGeminiWithMemory(userQuery) {
+    async function askGemini(query) {
       resetActivity();
-      setSpriteState('thinking');
+      setSpriteState('think');
       const apiKey = localStorage.getItem('gemini_api_key');
       const model = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
 
       if (!apiKey) {
-        speak("Я тебя слышу! Но чтобы я начал отвечать, вставь свой API-ключ в шестерёнку наверху!");
+        speak("Вставь API-ключ в настройках шестерёнки наверху!", 'idle');
         return;
       }
 
-      // Добавляем реплику пользователя в память
-      chatHistory.push({ role: "user", parts: [{ text: userQuery }] });
+      chatHistory.push({ role: "user", parts: [{ text: query }] });
+      if (chatHistory.length > 16) chatHistory = chatHistory.slice(-16);
 
-      // Оставляем последние 16 реплик для баланса памяти и скорости
-      if (chatHistory.length > 16) {
-        chatHistory = chatHistory.slice(-16);
-      }
-
-      const systemPrompt = "Ты — Джем, сообразительный, дружелюбный и преданный чиби-волчонок в черной футболке с логотипом Gemini. Ты общаешься голосом вслух! КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, скобки, смайлы и описывать свои действия от третьего лица. Отвечай живой устной речью от первого лица. Ты помнишь всё, о чём вы говорили раньше, общайся естественно, тепло и развёрнуто.";
+      const prompt = "Ты — Джем, сообразительный чиби-волчонок в черной футболке с логотипом Gemini. Ты общаешься только голосом! КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, скобки, смайлы и описывать свои действия от третьего лица. Отвечай от первого лица, выразительно, с теплотой и настоящими эмоциями. Ты прекрасно помнишь весь наш предыдущий диалог.";
 
       try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
+            systemInstruction: { parts: [{ text: prompt }] },
             contents: chatHistory
           })
         });
 
         const data = await res.json();
         if (data.error) {
-          speak("Ошибка Gemini: " + (data.error.message || "проверь ключ в настройках"));
+          speak("Ошибка Gemini: " + data.error.message, 'cry');
           return;
         }
 
         const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (reply) {
-          // Запоминаем ответ Джема
           chatHistory.push({ role: "model", parts: [{ text: reply }] });
           localStorage.setItem('jam_chat_history', JSON.stringify(chatHistory));
 
-          const cleanReply = cleanForSpeech(reply);
-          speak(cleanReply || reply);
+          const cleanReply = cleanText(reply);
+          const targetReaction = detectContextEmotion(query, cleanReply);
+          speak(cleanReply || reply, targetReaction);
         } else {
-          speak("Не удалось получить ответ.");
+          speak("Я не смог разобрать ответ.", 'idle');
         }
       } catch (err) {
-        speak("Не могу связаться с Gemini. Проверь интернет или VPN!");
+        speak("Связь оборвалась. Проверь сеть или VPN!", 'cry');
       }
     }
 
-    // Озвучка ответа и включение анимации рта
-        function speak(text) {
+    function speak(text, reactionEmotion = 'idle') {
       resetActivity();
-      const txt = cleanForSpeech(text);
+      const txt = cleanText(text);
       chatBubble.innerText = txt;
+      
+      // Включаем открывающийся ротик
       setSpriteState('talk');
 
-      const targetEmotion = detectEmotionFromText(text);
-
-      const vMode = localStorage.getItem('jam_voice') || 'neural_female';
-      const onEnd = () => {
-        setSpriteState(targetEmotion);
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        // После речи встаем в нужную эмоцию (хвастовство, смущение, злость, смех или покой)
+        setSpriteState(reactionEmotion);
         resetActivity();
       };
 
+      const vMode = localStorage.getItem('jam_voice') || 'neural_female';
       if (vMode.startsWith('neural')) {
         const vName = vMode === 'neural_female' ? 'ru-RU-SvetlanaNeural' : 'ru-RU-DmitryNeural';
         audioPlayer.pause();
         audioPlayer.currentTime = 0;
         audioPlayer.src = `https://api.streamelements.com/kappa/v2/speech?voice=${vName}&text=${encodeURIComponent(txt)}`;
-        audioPlayer.onended = onEnd;
-        audioPlayer.onerror = () => fallbackSpeak(txt, onEnd);
-        audioPlayer.play().catch(() => fallbackSpeak(txt, onEnd));
+        
+        audioPlayer.onplay = () => setSpriteState('talk');
+        audioPlayer.onended = finish;
+        audioPlayer.onerror = () => fallbackSpeak(txt, finish);
+        audioPlayer.play().catch(() => fallbackSpeak(txt, finish));
       } else {
-        fallbackSpeak(txt, onEnd);
+        fallbackSpeak(txt, finish);
       }
     }
 
@@ -365,6 +372,7 @@
       synth.cancel();
       const u = new SpeechSynthesisUtterance(txt);
       u.lang = 'ru-RU';
+      u.onstart = () => setSpriteState('talk');
       u.onend = () => { if(cb) cb(); };
       u.onerror = () => { if(cb) cb(); };
       synth.speak(u);
@@ -397,3 +405,4 @@
   </script>
 </body>
 </html>
+
