@@ -113,10 +113,12 @@
 
   <script>
     let isListening = false;
+    let isSpeakingOrReacting = false;
     let recognition = null;
     let synth = window.speechSynthesis;
     let audioPlayer = new Audio();
-    let speechTimer = null;
+    let talkTimer = null;
+    let reactionTimer = null;
     
     let lastAction = Date.now();
     let currentEmotion = 'idle';
@@ -160,7 +162,7 @@
       listening: 'Слушаю тебя ушком 🐾',
       think: 'Джем соображает...',
       talk: 'Джем говорит...',
-      biceps: 'Самый лучший помощник! 💪🐾',
+      biceps: 'Самый сильный помощник! 💪🐾',
       blush: 'Ой, смущаешь... 😳',
       eat: 'Джем жуёт сэндвич 🥪',
       dance: 'Лапками топ-топ! 🎵',
@@ -172,28 +174,25 @@
     };
 
     function setSpriteState(state) {
-      if (currentEmotion === state && wolfSprite.getAttribute('data-state') === state) {
-        return;
-      }
       currentEmotion = state;
       statusText.innerText = LABELS[state] || 'Джем 🐾';
       const target = SPRITES[state] || SPRITES.idle;
-      
-      wolfSprite.setAttribute('data-state', state);
-      wolfSprite.src = target;
+      if (!wolfSprite.src.endsWith(target)) {
+        wolfSprite.src = target;
+      }
     }
 
     function resetActivity() {
       lastAction = Date.now();
-      const activeEmotions = ['talk', 'listening', 'think', 'biceps', 'blush', 'mad', 'cry', 'offended', 'laugh'];
-      if (!activeEmotions.includes(currentEmotion)) {
+      if (!isSpeakingOrReacting && !isListening) {
         setSpriteState('idle');
       }
     }
 
-    // Таймер скуки
+    // Таймер скуки срабатывает ТОЛЬКО когда волчонок полностью свободен
     setInterval(() => {
-      if (isListening || (synth && synth.speaking) || !audioPlayer.paused || ['think', 'talk', 'listening', 'biceps', 'blush', 'mad', 'cry', 'offended', 'laugh'].includes(currentEmotion)) {
+      if (isListening || isSpeakingOrReacting) {
+        lastAction = Date.now();
         return;
       }
 
@@ -252,14 +251,18 @@
       recognition.interimResults = false;
 
       recognition.onstart = () => {
-        resetActivity();
+        if (talkTimer) clearTimeout(talkTimer);
+        if (reactionTimer) clearTimeout(reactionTimer);
+        isSpeakingOrReacting = false;
+        audioPlayer.pause();
+        if (synth) synth.cancel();
+
         isListening = true;
         micBtn.classList.add('active');
         micHint.innerText = 'Слушаю тебя...';
         setSpriteState('idle');
       };
       recognition.onresult = (e) => {
-        resetActivity();
         const text = e.results[0][0].transcript;
         chatBubble.innerText = 'Ты: ' + text;
         askGemini(text);
@@ -277,11 +280,12 @@
     }
 
     function handleMicClick() {
-      resetActivity();
       if (!recognition) { alert('Открой сайт через мобильный Chrome!'); return; }
-      if (synth && synth.speaking) synth.cancel();
-      if (!audioPlayer.paused) { audioPlayer.pause(); audioPlayer.currentTime = 0; }
-      if (speechTimer) clearTimeout(speechTimer);
+      if (talkTimer) clearTimeout(talkTimer);
+      if (reactionTimer) clearTimeout(reactionTimer);
+      isSpeakingOrReacting = false;
+      audioPlayer.pause();
+      if (synth) synth.cancel();
 
       if (isListening) {
         recognition.stop();
@@ -302,12 +306,13 @@
     }
 
     async function askGemini(query) {
-      resetActivity();
+      isSpeakingOrReacting = true;
       setSpriteState('think');
       const apiKey = localStorage.getItem('gemini_api_key');
       const model = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
 
       if (!apiKey) {
+        isSpeakingOrReacting = false;
         speak("Вставь API-ключ в настройках шестерёнки наверху!", 'idle');
         return;
       }
@@ -315,7 +320,7 @@
       chatHistory.push({ role: "user", parts: [{ text: query }] });
       if (chatHistory.length > 16) chatHistory = chatHistory.slice(-16);
 
-      const prompt = "Ты — Джем, сообразительный чиби-волчонок в черной футболке с логотипом Gemini. Ты общаешься только голосом! КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, скобки, смайлы и описывать свои действия от третьего лица. Отвечай от первого лица, выразительно, с теплотой и настоящими эмоциями. Ты прекрасно помнишь весь наш предыдущий диалог.";
+      const prompt = "Ты — Джем, сообразительный чиби-волчонок в черной футболке с логотипом Gemini. Ты общаешься только голосом! КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, скобки, смайлы и описывать свои действия от третьего лица. Отвечай от первого лица, выразительно, с теплотой и эмоциями. Ты помнишь весь наш диалог.";
 
       try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
@@ -329,6 +334,7 @@
 
         const data = await res.json();
         if (data.error) {
+          isSpeakingOrReacting = false;
           speak("Ошибка Gemini: " + data.error.message, 'cry');
           return;
         }
@@ -339,76 +345,73 @@
           localStorage.setItem('jam_chat_history', JSON.stringify(chatHistory));
 
           const cleanReply = cleanText(reply);
-          const targetReaction = detectContextEmotion(query, cleanReply);
-          speak(cleanReply || reply, targetReaction);
+          const reaction = detectContextEmotion(query, cleanReply);
+          
+          chatBubble.innerText = cleanReply;
+
+          // СНАЧАЛА 2.5 секунды показываем яркую эмоцию (бицепс, злость, плач), а потом говорим!
+          if (reaction !== 'idle') {
+            setSpriteState(reaction);
+            reactionTimer = setTimeout(() => {
+              executeSpeech(cleanReply);
+            }, 2600);
+          } else {
+            executeSpeech(cleanReply);
+          }
         } else {
-          speak("Я не смог разобрать ответ.", 'idle');
+          isSpeakingOrReacting = false;
+          setSpriteState('idle');
         }
       } catch (err) {
+        isSpeakingOrReacting = false;
         speak("Связь оборвалась. Проверь сеть или VPN!", 'cry');
       }
     }
 
-    function speak(text, reactionEmotion = 'idle') {
-      lastAction = Date.now();
-      const txt = cleanText(text);
-      chatBubble.innerText = txt;
+    function executeSpeech(txt) {
+      isSpeakingOrReacting = true;
       setSpriteState('talk');
 
-      if (speechTimer) clearTimeout(speechTimer);
+      // Точный расчет длительности: ~13 символов в секунду
+      const durationMs = Math.max(1600, Math.round((txt.length / 13) * 1000));
 
-      let finished = false;
-      const endSpeech = () => {
-        if (finished) return;
-        finished = true;
-        if (speechTimer) clearTimeout(speechTimer);
-
-        // Переключаем в реакцию (хвастовство, смущение, злость и т.д.)
-        setSpriteState(reactionEmotion);
+      const stopTalking = () => {
+        if (talkTimer) clearTimeout(talkTimer);
+        audioPlayer.pause();
+        if (synth) synth.cancel();
+        
+        // РОТ ЗАКРЫВАЕТСЯ СРАЗУ ПО ОКОНЧАНИИ ЗВУКА
+        setSpriteState('idle');
+        isSpeakingOrReacting = false;
         lastAction = Date.now();
-
-        // Держим реакцию 4.5 секунды, затем уходим в idle
-        if (reactionEmotion !== 'idle') {
-          setTimeout(() => {
-            if (currentEmotion === reactionEmotion) {
-              setSpriteState('idle');
-              lastAction = Date.now();
-            }
-          }, 4500);
-        }
       };
-
-      // Жёсткий расчёт времени речи по длине фразы (~12.5 символов в сек)
-      const exactDurationMs = Math.max(1800, Math.round((txt.length / 12.5) * 1000));
 
       const vMode = localStorage.getItem('jam_voice') || 'neural_female';
       if (vMode.startsWith('neural')) {
         const vName = vMode === 'neural_female' ? 'ru-RU-SvetlanaNeural' : 'ru-RU-DmitryNeural';
-        audioPlayer.pause();
-        audioPlayer.currentTime = 0;
         audioPlayer.src = `https://api.streamelements.com/kappa/v2/speech?voice=${vName}&text=${encodeURIComponent(txt)}`;
         
         audioPlayer.onplay = () => {
           setSpriteState('talk');
-          // Таймер стартует ТОЧНО когда начался реальный звук
-          speechTimer = setTimeout(endSpeech, exactDurationMs);
+          // Таймер глушит рот строго секунда в секунду
+          talkTimer = setTimeout(stopTalking, durationMs);
         };
-        audioPlayer.onended = endSpeech;
-        audioPlayer.onerror = () => fallbackSpeak(txt, endSpeech);
-        audioPlayer.play().catch(() => fallbackSpeak(txt, endSpeech));
+        audioPlayer.onended = stopTalking;
+        audioPlayer.onerror = () => fallbackSpeak(txt, stopTalking);
+        audioPlayer.play().catch(() => fallbackSpeak(txt, stopTalking));
       } else {
-        fallbackSpeak(txt, endSpeech);
+        fallbackSpeak(txt, stopTalking);
       }
     }
 
-    function fallbackSpeak(txt, cb) {
-      if (!synth) { if(cb) cb(); return; }
+    function fallbackSpeak(txt, onDone) {
+      if (!synth) { if(onDone) onDone(); return; }
       synth.cancel();
       const u = new SpeechSynthesisUtterance(txt);
       u.lang = 'ru-RU';
       u.onstart = () => setSpriteState('talk');
-      u.onend = () => { if(cb) cb(); };
-      u.onerror = () => { if(cb) cb(); };
+      u.onend = () => { if(onDone) onDone(); };
+      u.onerror = () => { if(onDone) onDone(); };
       synth.speak(u);
     }
 
