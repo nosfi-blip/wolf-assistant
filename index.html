@@ -37,7 +37,7 @@
       justify-content: center; 
       align-items: center;
       cursor: pointer;
-      touch-action: manipulation; /* Улучшает реакцию на тапы на мобильных */
+      touch-action: manipulation;
     }
     .wolf-sprite { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 
@@ -95,7 +95,6 @@
       </div>
       <div class="form-group">
         <label>Модель:</label>
-        <!-- ВОЗВРАЩЕНО: Твоя модель, как ты и просил -->
         <input type="text" id="modelInput" class="form-control" value="gemini-3.8-flash">
       </div>
       <div class="form-group">
@@ -159,8 +158,6 @@
     }
     window.addEventListener('load', preloadAllSprites);
 
-    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ 1: "Прогрев" аудио-движка при первом касании экрана.
-    // Без этого мобильные браузеры (iOS/Android) молча блокируют звук, если он запускается после асинхронного запроса к API.
     function unlockAudio() {
       if (audioUnlocked) return;
       audioUnlocked = true;
@@ -180,14 +177,13 @@
       }
     }
 
-    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ 2: Убрана блокировка `if (isSpeaking) return;`.
-    // Теперь тап по волку прерывает его речь и мгновенно реагирует, вместо того чтобы игнорировать нажатие.
     function handleMascotClick() {
       unlockAudio(); 
       
       if (isSpeaking) {
         synth.cancel();
         audioPlayer.pause();
+        audioPlayer.currentTime = 0; // ИСПРАВЛЕНИЕ: Полный сброс аудио при прерывании
         isSpeaking = false;
       }
       if (isListening) {
@@ -248,7 +244,6 @@
     }, 1000);
 
     document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
-    // Возвращено твое значение по умолчанию
     const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
     document.getElementById('modelInput').value = savedModel;
     brandTag.innerText = savedModel.includes('gemini') ? savedModel.replace('gemini-', '') : savedModel;
@@ -380,14 +375,17 @@
       chatBubble.scrollTop = chatBubble.scrollHeight;
       setSpriteState('talk');
 
-      // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ 3: "Страховочный таймер". 
-      // Если звук по какой-то причине зависнет и не сработает onended, волк всё равно вернется в idle через 15 сек, 
-      // и тапы снова начнут работать.
+      // ИСПРАВЛЕНИЕ: Жесткий сброс любых предыдущих аудио-процессов перед запуском новых
+      synth.cancel();
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+
       const safetyNet = setTimeout(() => {
         if (isSpeaking) {
           console.warn('Speech timeout, forcing reset');
           synth.cancel();
           audioPlayer.pause();
+          audioPlayer.currentTime = 0;
           setSpriteState('idle');
           isSpeaking = false;
           lastAction = Date.now();
@@ -396,6 +394,9 @@
 
       const finishSpeech = () => {
         clearTimeout(safetyNet);
+        synth.cancel();          // Гарантированная остановка синтезатора
+        audioPlayer.pause();     // Гарантированная остановка плеера
+        audioPlayer.currentTime = 0;
         setSpriteState('idle');
         isSpeaking = false;
         lastAction = Date.now();
@@ -404,16 +405,27 @@
       const vMode = localStorage.getItem('jam_voice') || 'system';
       
       if (vMode.startsWith('neural')) {
+        // ИСПРАВЛЕНИЕ: Сброс плеера перед загрузкой нового трека
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+        
         const vName = vMode === 'neural_female' ? 'ru-RU-SvetlanaNeural' : 'ru-RU-DmitryNeural';
         audioPlayer.src = `https://api.streamelements.com/kappa/v2/speech?voice=${vName}&text=${encodeURIComponent(txt)}`;
         
         audioPlayer.onended = finishSpeech;
         audioPlayer.onerror = () => {
           console.warn('Neural TTS failed, falling back');
+          audioPlayer.pause();
+          audioPlayer.currentTime = 0;
           fallbackSpeak(txt, finishSpeech);
         };
         
-        audioPlayer.play().catch(() => fallbackSpeak(txt, finishSpeech));
+        audioPlayer.play().catch((e) => {
+          console.warn('Play failed, falling back', e);
+          audioPlayer.pause();
+          audioPlayer.currentTime = 0;
+          fallbackSpeak(txt, finishSpeech);
+        });
       } else {
         fallbackSpeak(txt, finishSpeech);
       }
@@ -432,9 +444,18 @@
       const ruVoice = voices.find(v => v.lang.includes('ru'));
       if (ruVoice) u.voice = ruVoice;
 
+      // ИСПРАВЛЕНИЕ: Защита от двойного срабатывания событий в браузере (onend + onerror)
+      let isDone = false;
+      const safeDone = () => {
+        if (!isDone) {
+          isDone = true;
+          if (onDone) onDone();
+        }
+      };
+
       u.onstart = () => setSpriteState('talk');
-      u.onend = () => { if(onDone) onDone(); };
-      u.onerror = () => { if(onDone) onDone(); };
+      u.onend = safeDone;
+      u.onerror = safeDone;
       
       setTimeout(() => {
         synth.speak(u);
