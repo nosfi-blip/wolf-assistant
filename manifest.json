@@ -7,9 +7,9 @@
   "theme_color": "#0c0a3d",
   "icons": [
     {
-      "src": "idle.gif",
-      "sizes": "192x192 512x512",
-      "type": "image/gif"
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
