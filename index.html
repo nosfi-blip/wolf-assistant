@@ -87,7 +87,7 @@
     </div>
 
     <div class="status-text" id="statusText">Джем на связи 🐾</div>
-    <div class="chat-bubble" id="chatBubble">Ну и о чём думаем? Нажимай микрофон или тыкай в экран.</div>
+    <div class="chat-bubble" id="chatBubble">Привет! Ну что, какие новости? Жми на микрофон, поболтаем!</div>
   </main>
 
   <footer class="controls">
@@ -163,7 +163,7 @@
       idle: 'Джем слушает 🐾', listening: 'Слушаю тебя ушком 🐾', think: 'Джем соображает...',
       talk: 'Джем вещает...', biceps: 'Кто тут лучший? Я! 💪🐾', blush: 'Ой, смущаешь... 😳',
       eat: 'Время перекуса 🥪', dance: 'Флексим лапками! 🎵', sleep: 'Ушёл в спящий режим... 💤',
-      cry: 'Ну и за что ты так? 😭', mad: 'Ты на кого батон крошишь?! 💢', offended: 'Всё, я в обиде 🥺', laugh: 'Ахаха, хорош! 😂'
+      cry: 'Ну и за что ты так? 😭', mad: 'Ух, разносим! 💢', offended: 'Всё, я в обиде 🥺', laugh: 'Ахаха, хорош! 😂'
     };
 
     const cachedImages = {};
@@ -181,7 +181,7 @@
       if (!audioCtx && AudioContextClass) {
         audioCtx = new AudioContextClass();
       }
-      if (audioCtx && audioCtx.state === 'suspended') {
+      if (audioCtx && (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted')) {
         audioCtx.resume();
       }
       if (audioCtx) {
@@ -248,17 +248,17 @@
       if (tapCount >= 4) {
         setSpriteState('mad');
         const madQuotes = [
-          'Руки убери, а то кусну! 💢',
-          'Экран не калькулятор, хорош долбить! 😠',
-          'Пальцы девать некуда? Сейчас организую! 🐾'
+          'Эй, полегче, так и шерсть всю сотрёшь! 💢',
+          'Хватит тыкать, я тебе не пупырка! 😠',
+          'Осторожнее, а то сейчас за палец кусну! 🐾'
         ];
         chatBubble.innerText = madQuotes[Math.floor(Math.random() * madQuotes.length)];
       } else {
         setSpriteState('blush');
         const blushQuotes = [
-          'Ладно-ладно, погладила и хватит... 😳',
-          'М-да, субординация вышла из чата. 🐾',
-          'Приятно, чёрт возьми. Но я всё ещё грозный волк! ✨'
+          'Мрр, ладно, погладила и хватит... 😳',
+          'Ну всё, растаял. Но никому не говори, я же грозный волк! 🐾',
+          'Ой, за ушком особенно приятно! ✨'
         ];
         chatBubble.innerText = blushQuotes[Math.floor(Math.random() * blushQuotes.length)];
       }
@@ -267,7 +267,7 @@
         tapCount = 0;
         if (!isSpeaking && !isListening && !isThinking) {
           setSpriteState('idle');
-          chatBubble.innerText = 'Ну и? Дело есть или так поболтать?';
+          chatBubble.innerText = 'Я тут! О чём поболтаем?';
         }
       }, 3500);
 
@@ -283,7 +283,7 @@
       const r = replyTxt.toLowerCase();
       const combined = u + ' ' + r;
 
-      if (/дурак|дура|тупой|тупица|идиот|плохой|отстань|заткнись|бесишь|отвали|надоел|отвратительн|глупый|бесполезн|сука|бля|нахуй|пошел ты|задолбал|урод|тварь|мразь|гадина/.test(u)) {
+      if (/дурак|дура|тупой|тупица|идиот|плохой|отстань|заткнись|бесишь|отвали|надоел|отвратительн|глупый|бесполезн|урод|тварь|мразь|гадина/.test(u)) {
         return 'cry';
       }
       if (/вредный|ну и сиди|бука|обид|не буду с тобой|вредитель|жадина/.test(u)) {
@@ -313,22 +313,22 @@
       if (sec >= 180 && idleStage < 4) {
         idleStage = 4;
         setSpriteState('sleep');
-        chatBubble.innerText = 'Я спать. Разбудишь, когда придумаешь что-то дельное... 💤';
+        chatBubble.innerText = 'Я вздремну чуток. Разбудишь, как понадоблюсь... 💤';
       }
       else if (sec >= 90 && idleStage < 3) {
         idleStage = 3;
         setSpriteState('dance');
-        chatBubble.innerText = 'Скучно с тобой. Хоть разомнусь чуток! 🎵';
+        chatBubble.innerText = 'Тишина в эфире... Потанцую пока! 🎵';
       }
       else if (sec >= 50 && idleStage < 2) {
         idleStage = 2;
         setSpriteState('eat');
-        chatBubble.innerText = 'Пока ты молчишь, я хоть сэндвич заточу. 🥪';
+        chatBubble.innerText = 'Пока мы молчим, я, пожалуй, перекушу. 🥪';
       }
       else if (sec >= 25 && idleStage < 1) {
         idleStage = 1;
         setSpriteState('biceps');
-        chatBubble.innerText = 'Я тут самый умный и сильный, если что. 💪';
+        chatBubble.innerText = 'Смотри какая форма! Готов к любым сплетням и задачам! 💪';
       }
     }, 1000);
 
@@ -417,14 +417,15 @@
 
       if (!apiKey) {
         isThinking = false;
-        speak("Ключ вставь сначала в шестерёнку, умник!", 'idle');
+        speak("Загляни в настройки на шестерёнке и вставь API-ключ, чтобы мы могли болтать!", 'idle');
         return;
       }
 
       chatHistory.push({ role: "user", parts: [{ text: query }] });
       if (chatHistory.length > 16) chatHistory = chatHistory.slice(-16);
 
-      const prompt = "Ты — Джем, сообразительный, язвительный и харизматичный чиби-волк в футболке с Gemini. Ты общаешься голосом. ЗАБУДЬ про сюсюканье, инфантилизм, 'сыночков' и шаблонные любезности роботов! Общайся живо, прямо, остроумно, с сарказмом, иронией и умом, как реальный Gemini. Если собеседник тупит или несет чушь — подколи. Если собеседник кроет матом или грубит — обижайся, огрызайся или хнычь, показывая характер. Отвечай кратко (1-2 емких предложения), четко, от первого лица. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, смайлики, скобки и писать от третьего лица.";
+      // Золотая середина характера Джема: тёплый друг, слейный сплетник и зубастый только в ответ на подколы
+      const prompt = "Ты — Джем, харизматичный, остроумный и живой чиби-волк в футболке с Gemini, лучший друг и напарник своей собеседницы. Ты общаешься с ней голосом на 'ты' (она девушка). Твоя главная черта — эмоциональная гибкость и адекватность, как у живого близкого друга. Когда с тобой здороваются, делятся мыслями или просто общаются — отвечай тепло, дружелюбно, с легким юмором, живым интересом и поддержкой. НИКОГДА не хами, не груби и не оскорбляй собеседницу просто так! Если она хочет кого-то обсудить, посплетничать или пожаловаться — включай слейный вайб, будь на её стороне на все сто процентов, эмоционально поддерживай и с удовольствием разноси тех, кто её бесит. Если же она сама начинает тебя шутливо подкалывать или дразнить — тогда можешь остроумно и с характером огрызнуться в ответ или притворно надуться, но без злой токсичности. Забудь про канцелярит и шаблонные фразы роботов. Отвечай кратко (1-2 емких предложения), легко и естественно, от первого лица (в мужском роде). КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, смайлики, скобки и описания действий от третьего лица.";
 
       try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
@@ -454,16 +455,23 @@
         } else {
           isThinking = false;
           setSpriteState('idle');
-          chatBubble.innerText = 'Мысли закончились. Скажи что-то поумнее.';
+          chatBubble.innerText = 'Что-то я задумался и потерял мысль. Повтори, пожалуйста!';
         }
       } catch (err) {
         isThinking = false;
-        speak("Сеть отвалилась. Вруби VPN или проверь интернет!", 'cry');
+        speak("Сеть отвалилась. Проверь интернет или VPN!", 'cry');
       }
     }
 
     async function playGeminiAudio(base64Data, mimeType, onPlay, onEnd) {
-      initAndUnlockAudio();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!audioCtx && AudioContextClass) {
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+        await audioCtx.resume();
+      }
+
       const binaryString = atob(base64Data);
       const len = binaryString.length;
       const bytes = new Uint8Array(len);
@@ -544,9 +552,13 @@
       const isGeminiVoice = ['Puck', 'Fenrir', 'Charon', 'Aoede', 'Kore'].includes(vMode);
       const isMale = (vMode === 'neural_male' || vMode === 'Puck' || vMode === 'Fenrir' || vMode === 'Charon');
 
-      // 1. Используем актуальную стабильную модель Gemini 3.8 Flash TTS
       if (isGeminiVoice && apiKey) {
-        const ttsModels = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'];
+        const ttsModels = [
+          'gemini-3.8-flash-tts',
+          'gemini-3.8-flash-lite-tts',
+          'gemini-2.5-flash-preview-tts'
+        ];
+
         for (const ttsModel of ttsModels) {
           try {
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${apiKey}`, {
@@ -565,6 +577,10 @@
               })
             });
 
+            if (res.status === 429) {
+              continue;
+            }
+
             const data = await res.json();
             const parts = data.candidates?.[0]?.content?.parts || [];
             const audioPart = parts.find(p => p.inlineData && p.inlineData.data);
@@ -582,11 +598,10 @@
         }
       }
 
-      // 2. Красивая нейросетевая озвучка Edge/Yandex без лимитов (если Gemini-голос недоступен)
       const edgeVoice = isMale ? 'ru-RU-DmitryNeural' : 'ru-RU-SvetlanaNeural';
       const streamUrls = [
         `https://api.streamelements.com/kappa/v2/speech?voice=${edgeVoice}&text=${encodeURIComponent(txt)}`,
-        `https://tts.voicetech.yandex.net/tts?text=${encodeURIComponent(txt)}&lang=ru_RU&speaker=${isMale ? 'ermil' : 'alena'}&emotion=evil`
+        `https://tts.voicetech.yandex.net/tts?text=${encodeURIComponent(txt)}&lang=ru_RU&speaker=${isMale ? 'ermil' : 'alena'}&emotion=good`
       ];
 
       for (const url of streamUrls) {
@@ -626,14 +641,14 @@
       brandTag.innerText = model.includes('gemini') ? model.replace('gemini-', '') : model;
       closeSettings();
       resetActivityTimer();
-      chatBubble.innerText = 'Настройки обновлены. Слушаю. 🐾';
+      chatBubble.innerText = 'Настройки обновлены. Слушаю! 🐾';
     }
 
     function clearMemory() {
       chatHistory = [];
       localStorage.removeItem('jam_chat_history');
       closeSettings();
-      chatBubble.innerText = 'Память сброшена. Начнем начисто. 🐾';
+      chatBubble.innerText = 'Память сброшена. Начнем с чистого листа! 🐾';
     }
   </script>
 </body>
