@@ -73,12 +73,12 @@
   </header>
 
   <main class="stage">
-    <div class="mascot-box" id="mascotBox" onclick="handleMascotClick()" ontouchstart="handleMascotClick()">
+    <div class="mascot-box" id="mascotBox">
       <img class="wolf-sprite" id="wolfSprite" src="idle.gif" alt="Джем" data-state="idle">
     </div>
 
-    <div class="status-text" id="statusText">Привет! Я Джем 🐾</div>
-    <div class="chat-bubble" id="chatBubble">Нажми на микрофон или погладь меня!</div>
+    <div class="status-text" id="statusText">Джем на связи 🐾</div>
+    <div class="chat-bubble" id="chatBubble">Ну и о чём думаем? Нажимай микрофон или тыкай в экран.</div>
   </main>
 
   <footer class="controls">
@@ -100,9 +100,9 @@
       <div class="form-group">
         <label>Озвучка:</label>
         <select id="voiceSelect" class="form-control">
-          <option value="system">Системный синтезатор (Самый надежный)</option>
           <option value="neural_female">Светлана (нейросеть)</option>
           <option value="neural_male">Дмитрий (нейросеть)</option>
+          <option value="system">Системный синтезатор</option>
         </select>
       </div>
       <button class="btn btn-save" onclick="saveSettings()">Сохранить</button>
@@ -125,6 +125,8 @@
     let tapCount = 0;
     let tapTimer = null;
     let tapResetTimeout = null;
+    let postEmotionTimeout = null;
+    let idleStage = 0;
     let audioUnlocked = false; 
 
     const mascotBox = document.getElementById('mascotBox');
@@ -143,9 +145,9 @@
 
     const LABELS = {
       idle: 'Джем слушает 🐾', listening: 'Слушаю тебя ушком 🐾', think: 'Джем соображает...',
-      talk: 'Джем говорит...', biceps: 'Самый сильный помощник! 💪🐾', blush: 'Ой, смущаешь... 😳',
-      eat: 'Джем жуёт сэндвич 🥪', dance: 'Лапками топ-топ! 🎵', sleep: 'Джем сладко спит... 💤',
-      cry: 'Джем плачет 😭', mad: 'Джем злится! 💢', offended: 'Джем обиделся... 🥺', laugh: 'Джем смеётся! 😂'
+      talk: 'Джем вещает...', biceps: 'Кто тут лучший? Я! 💪🐾', blush: 'Ой, смущаешь... 😳',
+      eat: 'Время перекуса 🥪', dance: 'Флексим лапками! 🎵', sleep: 'Ушёл в спящий режим... 💤',
+      cry: 'Ну и за что ты так? 😭', mad: 'Ты на кого батон крошишь?! 💢', offended: 'Всё, я в обиде 🥺', laugh: 'Ахаха, хорош! 😂'
     };
 
     const cachedImages = {};
@@ -161,10 +163,11 @@
     function unlockAudio() {
       if (audioUnlocked) return;
       audioUnlocked = true;
+      audioPlayer.play().then(() => { audioPlayer.pause(); }).catch(() => {});
       if (synth) {
         const u = new SpeechSynthesisUtterance('');
         u.volume = 0;
-        synth.speak(u); 
+        synth.speak(u);
       }
     }
 
@@ -177,13 +180,25 @@
       }
     }
 
-    function handleMascotClick() {
+    function resetActivityTimer() {
+      lastAction = Date.now();
+      idleStage = 0;
+    }
+
+    // Тапы по мордочке
+    let lastTapTime = 0;
+    function handleMascotTap(e) {
+      if (e) e.preventDefault();
+      const now = Date.now();
+      if (now - lastTapTime < 180) return;
+      lastTapTime = now;
+
       unlockAudio(); 
+      resetActivityTimer();
+      if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
       
       if (isSpeaking) {
-        synth.cancel();
-        audioPlayer.pause();
-        audioPlayer.currentTime = 0; // ИСПРАВЛЕНИЕ: Полный сброс аудио при прерывании
+        stopAllAudio();
         isSpeaking = false;
       }
       if (isListening) {
@@ -193,7 +208,6 @@
         micHint.innerText = 'Нажми и говори';
       }
 
-      lastAction = Date.now();
       tapCount++;
 
       if (tapTimer) clearTimeout(tapTimer);
@@ -201,11 +215,19 @@
 
       if (tapCount >= 4) {
         setSpriteState('mad');
-        const madQuotes = ['Эй, хватит тыкать в нос! 💢', 'Я волк, а не экран блокировки! 😠', 'Укушу за палец! Ай-ай-ай! 🐾'];
+        const madQuotes = [
+          'Руки убери, а то кусну! 💢',
+          'Экран не калькулятор, хорош долбить! 😠',
+          'Пальцы девать некуда? Сейчас организую! 🐾'
+        ];
         chatBubble.innerText = madQuotes[Math.floor(Math.random() * madQuotes.length)];
       } else {
         setSpriteState('blush');
-        const blushQuotes = ['Ой, щекотно! 😳', 'Ты меня гладишь? Мур-р... то есть гав! 🐾', 'Хи-хи, приятно! ✨'];
+        const blushQuotes = [
+          'Ладно-ладно, погладила и хватит... 😳',
+          'М-да, субординация вышла из чата. 🐾',
+          'Приятно, чёрт возьми. Но я всё ещё грозный волк! ✨'
+        ];
         chatBubble.innerText = blushQuotes[Math.floor(Math.random() * blushQuotes.length)];
       }
 
@@ -213,33 +235,72 @@
         tapCount = 0;
         if (!isSpeaking && !isListening) {
           setSpriteState('idle');
-          chatBubble.innerText = 'Нажми на микрофон или погладь меня!';
+          chatBubble.innerText = 'Ну и? Дело есть или так поболтать?';
         }
       }, 3500);
 
       tapTimer = setTimeout(() => {
         tapCount = 0;
-      }, 2500);
+      }, 2000);
     }
 
+    mascotBox.addEventListener('pointerdown', handleMascotTap);
+
+    function detectContextEmotion(userTxt, replyTxt) {
+      const u = userTxt.toLowerCase();
+      const r = replyTxt.toLowerCase();
+      const combined = u + ' ' + r;
+
+      if (/дурак|дура|тупой|тупица|идиот|плохой|отстань|заткнись|бесишь|отвали|надоел|отвратительн|глупый|бесполезн|сука|бля|нахуй|пошел ты|задолбал|урод|тварь|мразь|гадина/.test(u)) {
+        return 'cry';
+      }
+      if (/вредный|ну и сиди|бука|обид|не буду с тобой|вредитель|жадина/.test(u)) {
+        return 'offended';
+      }
+      if (/бесит|злит|раздражает|ужас|кошмар|жесть|ненавижу|сволоч|гад|злюсь|бесяв|взбесил|злой|злая|порву|достало|бесят/.test(combined)) {
+        return 'mad';
+      }
+      if (/молодец|умница|красавчик|лучший|классный|супер|спасибо|обожаю|сильный|крутой|милый|хороший|золотце|люблю/.test(u)) {
+        return Math.random() > 0.5 ? 'biceps' : 'blush';
+      }
+      if (/ахах|ха-ха|хи-хи|лол|смешн|ржу|прикол|кек/.test(combined)) {
+        return 'laugh';
+      }
+
+      return 'idle';
+    }
+
+    // Спокойный, плавный таймер скуки (никакой чехарды!)
     setInterval(() => {
-      if (isListening || isSpeaking || tapCount > 0) {
-        lastAction = Date.now();
+      if (isListening || isSpeaking || tapCount > 0 || currentEmotion === 'cry') {
         return;
       }
+
       const sec = Math.floor((Date.now() - lastAction) / 1000);
-      if (sec >= 90 && currentEmotion !== 'sleep') {
+
+      // Спит только через 3 минуты (180 сек)
+      if (sec >= 180 && idleStage < 4) {
+        idleStage = 4;
         setSpriteState('sleep');
-        chatBubble.innerText = 'Снится сахарная косточка... 💤';
-      } else if (sec >= 60 && currentEmotion !== 'dance') {
+        chatBubble.innerText = 'Я спать. Разбудишь, когда придумаешь что-то дельное... 💤';
+      }
+      // Танцует через 90 секунд
+      else if (sec >= 90 && idleStage < 3) {
+        idleStage = 3;
         setSpriteState('dance');
-        chatBubble.innerText = 'Лапками топ-топ! Потанцуем? 🎵';
-      } else if (sec >= 35 && currentEmotion !== 'eat') {
+        chatBubble.innerText = 'Скучно с тобой. Хоть разомнусь чуток! 🎵';
+      }
+      // Ест бутерброд через 50 секунд
+      else if (sec >= 50 && idleStage < 2) {
+        idleStage = 2;
         setSpriteState('eat');
-        chatBubble.innerText = 'Хрум-хрум! Вкусный сэндвич! 🥪';
-      } else if (sec >= 15 && currentEmotion !== 'biceps') {
+        chatBubble.innerText = 'Пока ты молчишь, я хоть сэндвич заточу. 🥪';
+      }
+      // Бицепс через 25 секунд
+      else if (sec >= 25 && idleStage < 1) {
+        idleStage = 1;
         setSpriteState('biceps');
-        chatBubble.innerText = 'Я тут, если понадоблюсь! 💪';
+        chatBubble.innerText = 'Я тут самый умный и сильный, если что. 💪';
       }
     }, 1000);
 
@@ -247,7 +308,7 @@
     const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
     document.getElementById('modelInput').value = savedModel;
     brandTag.innerText = savedModel.includes('gemini') ? savedModel.replace('gemini-', '') : savedModel;
-    document.getElementById('voiceSelect').value = localStorage.getItem('jam_voice') || 'system';
+    document.getElementById('voiceSelect').value = localStorage.getItem('jam_voice') || 'neural_female';
 
     if (synth) {
       synth.getVoices();
@@ -264,8 +325,9 @@
       recognition.interimResults = false;
 
       recognition.onstart = () => {
-        audioPlayer.pause();
-        if (synth) synth.cancel();
+        stopAllAudio();
+        resetActivityTimer();
+        if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
         isSpeaking = false;
         isListening = true;
         micBtn.classList.add('active');
@@ -278,8 +340,7 @@
         chatBubble.scrollTop = chatBubble.scrollHeight;
         askGemini(text);
       };
-      recognition.onerror = (e) => {
-        console.error('Speech error:', e.error);
+      recognition.onerror = () => {
         isListening = false;
         micBtn.classList.remove('active');
         setSpriteState('idle');
@@ -292,20 +353,29 @@
       };
     }
 
+    function stopAllAudio() {
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+      if (synth) {
+        synth.cancel();
+      }
+    }
+
     function handleMicClick() {
       unlockAudio(); 
+      resetActivityTimer();
+      if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
       if (!recognition) { 
-        chatBubble.innerText = 'Открой сайт через мобильный Chrome или Safari!'; 
+        chatBubble.innerText = 'Открой сайт через мобильный Chrome!'; 
         return; 
       }
-      audioPlayer.pause();
-      if (synth) synth.cancel();
+      stopAllAudio();
       isSpeaking = false;
 
       if (isListening) {
         recognition.stop();
       } else {
-        try { recognition.start(); } catch(e) { console.error(e); }
+        try { recognition.start(); } catch(e) {}
       }
     }
 
@@ -321,20 +391,21 @@
     }
 
     async function askGemini(query) {
-      lastAction = Date.now();
+      resetActivityTimer();
       setSpriteState('think');
       const apiKey = localStorage.getItem('gemini_api_key');
       const model = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
 
       if (!apiKey) {
-        speak("Вставь API-ключ в настройках (шестерёнка наверху)!");
+        speak("Ключ вставь сначала в шестерёнку, умник!", 'idle');
         return;
       }
 
       chatHistory.push({ role: "user", parts: [{ text: query }] });
       if (chatHistory.length > 16) chatHistory = chatHistory.slice(-16);
 
-      const prompt = "Ты — Джем, сообразительный чиби-волчонок в черной футболке с логотипом Gemini. Ты общаешься только голосом! КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, скобки, смайлы и описывать свои действия от третьего лица. Отвечай от первого лица, выразительно, с теплотой и эмоциями. Короткими фразами, как в живом разговоре.";
+      // СИСТЕМНЫЙ ПРОМПТ С ХАРАКТЕРОМ И ИРОНИЕЙ
+      const prompt = "Ты — Джем, сообразительный, язвительный и харизматичный чиби-волк в футболке с Gemini. Ты общаешься голосом. ЗАБУДЬ про сюсюканье, инфантилизм, 'сыночков' и шаблонные любезности роботов! Общайся живо, прямо, остроумно, с сарказмом, иронией и умом, как реальный Gemini. Если собеседник тупит или несет чушь — можешь подколоть. Если собеседник кроет матом или грубит — обижайся, огрызайся или хнычь, показывая характер. Отвечай компактно, четко, без воды, без списков, от первого лица. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, смайлики, скобки и писать от третьего лица.";
 
       try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
@@ -348,7 +419,7 @@
 
         const data = await res.json();
         if (data.error) {
-          speak("Ошибка API: " + data.error.message);
+          speak("Ошибка у API: " + data.error.message, 'cry');
           return;
         }
 
@@ -357,74 +428,73 @@
           chatHistory.push({ role: "model", parts: [{ text: reply }] });
           localStorage.setItem('jam_chat_history', JSON.stringify(chatHistory));
           const cleanReply = cleanText(reply);
-          speak(cleanReply);
+          const reaction = detectContextEmotion(query, cleanReply);
+          speak(cleanReply, reaction);
         } else {
           setSpriteState('idle');
-          chatBubble.innerText = 'Хм, мне нечего сказать...';
+          chatBubble.innerText = 'Мысли закончились. Скажи что-то поумнее.';
         }
       } catch (err) {
-        console.error(err);
-        speak("Связь оборвалась. Проверь интернет или настройки модели!");
+        speak("Сеть отвалилась. Вруби VPN или проверь интернет!", 'cry');
       }
     }
 
-    function speak(txt) {
-      lastAction = Date.now();
+    function speak(txt, reactionEmotion = 'idle') {
+      resetActivityTimer();
+      stopAllAudio();
+      if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
+
       isSpeaking = true;
       chatBubble.innerText = txt;
       chatBubble.scrollTop = chatBubble.scrollHeight;
       setSpriteState('talk');
 
-      // ИСПРАВЛЕНИЕ: Жесткий сброс любых предыдущих аудио-процессов перед запуском новых
-      synth.cancel();
-      audioPlayer.pause();
-      audioPlayer.currentTime = 0;
-
-      const safetyNet = setTimeout(() => {
-        if (isSpeaking) {
-          console.warn('Speech timeout, forcing reset');
-          synth.cancel();
-          audioPlayer.pause();
-          audioPlayer.currentTime = 0;
-          setSpriteState('idle');
-          isSpeaking = false;
-          lastAction = Date.now();
-        }
-      }, 15000);
-
+      let speechFinished = false;
       const finishSpeech = () => {
-        clearTimeout(safetyNet);
-        synth.cancel();          // Гарантированная остановка синтезатора
-        audioPlayer.pause();     // Гарантированная остановка плеера
-        audioPlayer.currentTime = 0;
-        setSpriteState('idle');
+        if (speechFinished) return;
+        speechFinished = true;
         isSpeaking = false;
-        lastAction = Date.now();
+        resetActivityTimer();
+
+        if (reactionEmotion !== 'idle') {
+          setSpriteState(reactionEmotion);
+          postEmotionTimeout = setTimeout(() => {
+            if (!isSpeaking && !isListening && tapCount === 0) {
+              setSpriteState('idle');
+            }
+          }, 4000);
+        } else {
+          setSpriteState('idle');
+        }
       };
 
-      const vMode = localStorage.getItem('jam_voice') || 'system';
+      const vMode = localStorage.getItem('jam_voice') || 'neural_female';
       
       if (vMode.startsWith('neural')) {
-        // ИСПРАВЛЕНИЕ: Сброс плеера перед загрузкой нового трека
-        audioPlayer.pause();
-        audioPlayer.currentTime = 0;
-        
         const vName = vMode === 'neural_female' ? 'ru-RU-SvetlanaNeural' : 'ru-RU-DmitryNeural';
+        let playbackStarted = false;
+
         audioPlayer.src = `https://api.streamelements.com/kappa/v2/speech?voice=${vName}&text=${encodeURIComponent(txt)}`;
         
-        audioPlayer.onended = finishSpeech;
-        audioPlayer.onerror = () => {
-          console.warn('Neural TTS failed, falling back');
-          audioPlayer.pause();
-          audioPlayer.currentTime = 0;
-          fallbackSpeak(txt, finishSpeech);
+        audioPlayer.onplay = () => {
+          playbackStarted = true;
+          setSpriteState('talk');
         };
+
+        audioPlayer.onended = finishSpeech;
         
-        audioPlayer.play().catch((e) => {
-          console.warn('Play failed, falling back', e);
-          audioPlayer.pause();
-          audioPlayer.currentTime = 0;
-          fallbackSpeak(txt, finishSpeech);
+        audioPlayer.onerror = () => {
+          if (!playbackStarted && !speechFinished) {
+            fallbackSpeak(txt, finishSpeech);
+          } else {
+            finishSpeech();
+          }
+        };
+
+        audioPlayer.play().catch(() => {
+          if (!playbackStarted && !speechFinished) {
+            fallbackSpeak(txt, finishSpeech);
+          }
         });
       } else {
         fallbackSpeak(txt, finishSpeech);
@@ -444,22 +514,11 @@
       const ruVoice = voices.find(v => v.lang.includes('ru'));
       if (ruVoice) u.voice = ruVoice;
 
-      // ИСПРАВЛЕНИЕ: Защита от двойного срабатывания событий в браузере (onend + onerror)
-      let isDone = false;
-      const safeDone = () => {
-        if (!isDone) {
-          isDone = true;
-          if (onDone) onDone();
-        }
-      };
-
       u.onstart = () => setSpriteState('talk');
-      u.onend = safeDone;
-      u.onerror = safeDone;
+      u.onend = () => { if(onDone) onDone(); };
+      u.onerror = () => { if(onDone) onDone(); };
       
-      setTimeout(() => {
-        synth.speak(u);
-      }, 50);
+      synth.speak(u);
     }
 
     function openSettings() { document.getElementById('settingsModal').classList.add('open'); }
@@ -476,15 +535,15 @@
 
       brandTag.innerText = model.includes('gemini') ? model.replace('gemini-', '') : model;
       closeSettings();
-      lastAction = Date.now();
-      chatBubble.innerText = 'Настройки сохранены! ✨';
+      resetActivityTimer();
+      chatBubble.innerText = 'Настройки обновлены. Слушаю. 🐾';
     }
 
     function clearMemory() {
       chatHistory = [];
       localStorage.removeItem('jam_chat_history');
       closeSettings();
-      chatBubble.innerText = 'Память очищена! Начнём сначала 🐾';
+      chatBubble.innerText = 'Память сброшена. Начнем начисто. 🐾';
     }
   </script>
 </body>
