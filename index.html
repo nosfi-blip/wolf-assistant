@@ -27,7 +27,7 @@
     .brand-tag { font-size: 0.65rem; background: var(--accent); color: #0c0a3d; padding: 2px 7px; border-radius: 10px; font-weight: 800; }
     .icon-btn { background: none; border: none; color: var(--text); font-size: 1.3rem; cursor: pointer; padding: 8px; }
     
-    .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 16px; position: relative; }
+    .stage { flex: 1; display: flex; flex-direction: column; align-items: center; align-content: center; justify-content: center; padding: 12px 16px; position: relative; }
     
     .mascot-box { 
       width: 280px; 
@@ -112,13 +112,14 @@
 
   <script>
     let isListening = false;
+    let isThinking = false; // Флаг, чтобы Джем не скучал, пока ждет ответ от сервера
     let isSpeaking = false;
     let recognition = null;
     
-    // Постоянный аудиоплеер (чтобы телефон не блокировал звук после ответа сети)
     const currentAudio = new Audio();
     currentAudio.preload = 'auto';
     let audioUnlocked = false;
+    let availableVoices = [];
     
     let lastAction = Date.now();
     let currentEmotion = 'idle';
@@ -151,6 +152,17 @@
       cry: 'Ну и за что ты так? 😭', mad: 'Ты на кого батон крошишь?! 💢', offended: 'Всё, я в обиде 🥺', laugh: 'Ахаха, хорош! 😂'
     };
 
+    // Загружаем голоса (в том числе Светлану и Дмитрия, если они есть в браузере/системе)
+    function loadVoices() {
+      if ('speechSynthesis' in window) {
+        availableVoices = window.speechSynthesis.getVoices();
+      }
+    }
+    if ('speechSynthesis' in window) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     const cachedImages = {};
     function preloadAllSprites() {
       Object.entries(SPRITES).forEach(([key, url]) => {
@@ -161,15 +173,22 @@
     }
     window.addEventListener('load', preloadAllSprites);
 
-    // Функция «прогрева» звука при первом касании экрана
     function unlockAudio() {
       if (audioUnlocked) return;
+      // Разблокируем HTML5 Audio
       currentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
       currentAudio.play().then(() => {
         currentAudio.pause();
         currentAudio.currentTime = 0;
         audioUnlocked = true;
       }).catch(() => {});
+
+      // Разблокируем синтезатор речи
+      if ('speechSynthesis' in window) {
+        const silentUtterance = new SpeechSynthesisUtterance('');
+        silentUtterance.volume = 0;
+        window.speechSynthesis.speak(silentUtterance);
+      }
     }
 
     function setSpriteState(state) {
@@ -191,6 +210,9 @@
       currentAudio.onplay = null;
       currentAudio.onended = null;
       currentAudio.onerror = null;
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
       isSpeaking = false;
     }
 
@@ -239,7 +261,7 @@
 
       tapResetTimeout = setTimeout(() => {
         tapCount = 0;
-        if (!isSpeaking && !isListening) {
+        if (!isSpeaking && !isListening && !isThinking) {
           setSpriteState('idle');
           chatBubble.innerText = 'Ну и? Дело есть или так поболтать?';
         }
@@ -276,8 +298,10 @@
       return 'idle';
     }
 
+    // Таймер бездействия: теперь НЕ срабатывает, когда Джем думает (isThinking)
     setInterval(() => {
-      if (isListening || isSpeaking || tapCount > 0 || currentEmotion === 'cry') {
+      if (isListening || isThinking || isSpeaking || tapCount > 0 || currentEmotion === 'cry' || currentEmotion === 'think') {
+        lastAction = Date.now(); // Держим таймер свежим, пока он занят
         return;
       }
 
@@ -338,13 +362,15 @@
       recognition.onerror = () => {
         isListening = false;
         micBtn.classList.remove('active');
-        setSpriteState('idle');
+        if (!isThinking && !isSpeaking) setSpriteState('idle');
         micHint.innerText = 'Не расслышал. Попробуй еще раз.';
       };
       recognition.onend = () => {
         isListening = false;
         micBtn.classList.remove('active');
-        if (!isSpeaking && currentEmotion === 'listening') {
+        micHint.innerText = 'Нажми и говори';
+        // Не сбрасываем в idle, если он уже начал думать (isThinking) или говорить
+        if (!isSpeaking && !isThinking && currentEmotion === 'listening') {
           setSpriteState('idle');
         }
       };
@@ -379,12 +405,15 @@
     }
 
     async function askGemini(query) {
+      isThinking = true;
       resetActivityTimer();
       setSpriteState('think');
+      
       const apiKey = localStorage.getItem('gemini_api_key');
       const model = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
 
       if (!apiKey) {
+        isThinking = false;
         speak("Ключ вставь сначала в шестерёнку, умник!", 'idle');
         return;
       }
@@ -405,6 +434,8 @@
         });
 
         const data = await res.json();
+        isThinking = false;
+
         if (data.error) {
           speak("Ошибка у API: " + data.error.message, 'cry');
           return;
@@ -422,11 +453,13 @@
           chatBubble.innerText = 'Мысли закончились. Скажи что-то поумнее.';
         }
       } catch (err) {
+        isThinking = false;
         speak("Сеть отвалилась. Вруби VPN или проверь интернет!", 'cry');
       }
     }
 
     function speak(txt, reactionEmotion = 'idle') {
+      isThinking = false;
       resetActivityTimer();
       stopCurrentSpeech();
       if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
@@ -450,7 +483,7 @@
         if (reactionEmotion !== 'idle') {
           setSpriteState(reactionEmotion);
           postEmotionTimeout = setTimeout(() => {
-            if (!isSpeaking && !isListening && tapCount === 0) {
+            if (!isSpeaking && !isListening && !isThinking && tapCount === 0) {
               setSpriteState('idle');
             }
           }, 4000);
@@ -460,17 +493,60 @@
       };
 
       const vMode = localStorage.getItem('jam_voice') || 'neural_female';
-      const vName = vMode === 'neural_male' ? 'ru-RU-DmitryNeural' : 'ru-RU-SvetlanaNeural';
-      const audioUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${vName}&text=${encodeURIComponent(txt)}`;
+
+      // Функция запуска через системный синтезатор (ищет Светлану/Дмитрия или любой русский голос)
+      const speakWithSystemVoice = () => {
+        if (!('speechSynthesis' in window)) {
+          onSpeechEnd();
+          return;
+        }
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(txt);
+        u.lang = 'ru-RU';
+        u.rate = 1.05;
+
+        const voices = window.speechSynthesis.getVoices();
+        const ruVoices = voices.filter(v => v.lang.toLowerCase().includes('ru'));
+
+        if (ruVoices.length > 0) {
+          let targetVoice = null;
+          if (vMode === 'neural_male') {
+            targetVoice = ruVoices.find(v => /dmitry|дмитрий|pavel|павел|male|yuri|юрий|maxim|максим/i.test(v.name));
+          } else {
+            targetVoice = ruVoices.find(v => /svetlana|светлана|dariya|дарья|irina|ирина|female|milena|милена|tatyana|татьяна|google/i.test(v.name));
+          }
+          u.voice = targetVoice || ruVoices[0];
+        }
+
+        u.onstart = () => setSpriteState('talk');
+        u.onend = onSpeechEnd;
+        u.onerror = onSpeechEnd;
+
+        setSpriteState('talk');
+        window.speechSynthesis.speak(u);
+      };
+
+      // 1. Проверяем, есть ли нейросетевые голоса Светлана/Дмитрий прямо в браузере
+      const voices = ('speechSynthesis' in window) ? window.speechSynthesis.getVoices() : [];
+      const hasNativeNeural = voices.some(v => /svetlana|светлана|dmitry|дмитрий/i.test(v.name));
+
+      if (hasNativeNeural) {
+        speakWithSystemVoice();
+        return;
+      }
+
+      // 2. Пробуем внешний аудиопоток (исправлены имена голосов для StreamElements: Tatyana / Maxim)
+      const seVoice = vMode === 'neural_male' ? 'Maxim' : 'Tatyana';
+      const audioUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${seVoice}&text=${encodeURIComponent(txt)}`;
 
       currentAudio.onplay = () => {
         setSpriteState('talk');
       };
-
       currentAudio.onended = onSpeechEnd;
-
+      
+      // 3. Если внешний сервер не ответил или заблокирован — мгновенно включаем встроенный голос!
       currentAudio.onerror = () => {
-        onSpeechEnd();
+        speakWithSystemVoice();
       };
 
       currentAudio.src = audioUrl;
@@ -479,7 +555,7 @@
       const playPromise = currentAudio.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          onSpeechEnd();
+          speakWithSystemVoice();
         });
       }
     }
