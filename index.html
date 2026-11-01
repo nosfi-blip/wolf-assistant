@@ -114,7 +114,11 @@
     let isListening = false;
     let isSpeaking = false;
     let recognition = null;
-    let currentAudio = null;
+    
+    // Постоянный аудиоплеер (чтобы телефон не блокировал звук после ответа сети)
+    const currentAudio = new Audio();
+    currentAudio.preload = 'auto';
+    let audioUnlocked = false;
     
     let lastAction = Date.now();
     let currentEmotion = 'idle';
@@ -157,6 +161,17 @@
     }
     window.addEventListener('load', preloadAllSprites);
 
+    // Функция «прогрева» звука при первом касании экрана
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      currentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      currentAudio.play().then(() => {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        audioUnlocked = true;
+      }).catch(() => {});
+    }
+
     function setSpriteState(state) {
       currentEmotion = state;
       statusText.innerText = LABELS[state] || 'Джем 🐾';
@@ -172,12 +187,10 @@
     }
 
     function stopCurrentSpeech() {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.onended = null;
-        currentAudio.onerror = null;
-        currentAudio = null;
-      }
+      currentAudio.pause();
+      currentAudio.onplay = null;
+      currentAudio.onended = null;
+      currentAudio.onerror = null;
       isSpeaking = false;
     }
 
@@ -188,6 +201,7 @@
       if (now - lastTapTime < 180) return;
       lastTapTime = now;
 
+      unlockAudio();
       resetActivityTimer();
       if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
       
@@ -296,7 +310,6 @@
     document.getElementById('modelInput').value = savedModel;
     brandTag.innerText = savedModel.includes('gemini') ? savedModel.replace('gemini-', '') : savedModel;
     
-    // Только нейросеть
     document.getElementById('voiceSelect').value = localStorage.getItem('jam_voice') || 'neural_female';
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -331,7 +344,9 @@
       recognition.onend = () => {
         isListening = false;
         micBtn.classList.remove('active');
-        if (!isSpeaking) setSpriteState('idle');
+        if (!isSpeaking && currentEmotion === 'listening') {
+          setSpriteState('idle');
+        }
       };
     }
 
@@ -343,6 +358,7 @@
         return; 
       }
       stopCurrentSpeech();
+      unlockAudio();
 
       if (isListening) {
         recognition.stop();
@@ -415,6 +431,11 @@
       stopCurrentSpeech();
       if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
 
+      if (!txt) {
+        setSpriteState('idle');
+        return;
+      }
+
       isSpeaking = true;
       chatBubble.innerText = txt;
       chatBubble.scrollTop = chatBubble.scrollHeight;
@@ -442,26 +463,25 @@
       const vName = vMode === 'neural_male' ? 'ru-RU-DmitryNeural' : 'ru-RU-SvetlanaNeural';
       const audioUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${vName}&text=${encodeURIComponent(txt)}`;
 
-      // Создаем свежий изолированный объект аудио
-      const audio = new Audio();
-      currentAudio = audio;
-      audio.preload = 'auto';
-      audio.src = audioUrl;
-
-      audio.onplay = () => {
+      currentAudio.onplay = () => {
         setSpriteState('talk');
       };
 
-      audio.onended = onSpeechEnd;
+      currentAudio.onended = onSpeechEnd;
 
-      audio.onerror = () => {
+      currentAudio.onerror = () => {
         onSpeechEnd();
       };
 
-      // Прямой запуск без откатов на робота
-      audio.play().catch(() => {
-        onSpeechEnd();
-      });
+      currentAudio.src = audioUrl;
+      currentAudio.load();
+
+      const playPromise = currentAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          onSpeechEnd();
+        });
+      }
     }
 
     function openSettings() { document.getElementById('settingsModal').classList.add('open'); }
