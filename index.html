@@ -7,6 +7,14 @@
   <link rel="manifest" href="manifest.json">
   <script>
     if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        for (let reg of regs) reg.update();
+      });
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          for (let name of names) caches.delete(name);
+        });
+      }
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   </script>
@@ -96,7 +104,7 @@
       </div>
       <div class="form-group">
         <label>Модель:</label>
-        <input type="text" id="modelInput" class="form-control" value="gemini-3.5-flash-lite">
+        <input type="text" id="modelInput" class="form-control" value="gemini-3.8-flash">
       </div>
       <div class="form-group">
         <label>Озвучка:</label>
@@ -106,8 +114,8 @@
           <option value="Charon">Gemini: Charon (Спокойный мужской)</option>
           <option value="Aoede">Gemini: Aoede (Живой женский)</option>
           <option value="Kore">Gemini: Kore (Мягкий женский)</option>
-          <option value="neural_male">Дмитрий (Быстрый без задержки)</option>
-          <option value="neural_female">Светлана (Быстрый без задержки)</option>
+          <option value="neural_male">Дмитрий (Резервный мужской)</option>
+          <option value="neural_female">Светлана (Резервный женский)</option>
         </select>
       </div>
       <button class="btn btn-save" onclick="saveSettings()">Сохранить</button>
@@ -125,6 +133,7 @@
     let audioCtx = null;
     let currentSource = null;
     const currentAudio = new Audio();
+    currentAudio.preload = 'auto';
     
     let lastAction = Date.now();
     let currentEmotion = 'idle';
@@ -182,9 +191,6 @@
         source.connect(audioCtx.destination);
         try { source.start(0); } catch(e) {}
       }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.getVoices();
-      }
     }
 
     function setSpriteState(state) {
@@ -211,9 +217,6 @@
       currentAudio.onplay = null;
       currentAudio.onended = null;
       currentAudio.onerror = null;
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
       isSpeaking = false;
     }
 
@@ -330,7 +333,7 @@
     }, 1000);
 
     document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
-    const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.5-flash-lite';
+    const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
     document.getElementById('modelInput').value = savedModel;
     brandTag.innerText = savedModel.includes('gemini') ? savedModel.replace('gemini-', '') : savedModel;
     
@@ -410,7 +413,7 @@
       setSpriteState('think');
       
       const apiKey = localStorage.getItem('gemini_api_key');
-      const model = localStorage.getItem('gemini_model') || 'gemini-3.5-flash-lite';
+      const model = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
 
       if (!apiKey) {
         isThinking = false;
@@ -447,7 +450,6 @@
           localStorage.setItem('jam_chat_history', JSON.stringify(chatHistory));
           const cleanReply = cleanText(reply);
           const reaction = detectContextEmotion(query, cleanReply);
-          // Передаем в озвучку (пока готовится голос, Джем продолжает думать, не показывая текст заранее)
           await speak(cleanReply, reaction);
         } else {
           isThinking = false;
@@ -510,7 +512,6 @@
 
       let finished = false;
 
-      // Показываем текст и включаем анимацию разговора ТОЛЬКО в момент старта звука
       const onSpeechStart = () => {
         isThinking = false;
         isSpeaking = true;
@@ -540,71 +541,19 @@
 
       const vMode = localStorage.getItem('jam_voice') || 'Puck';
       const apiKey = localStorage.getItem('gemini_api_key');
-
-      // Быстрая системная озвучка (срабатывает мгновенно)
-      const fallbackSpeak = () => {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(txt);
-          u.lang = 'ru-RU';
-          const isMale = (vMode === 'neural_male' || vMode === 'Puck' || vMode === 'Fenrir' || vMode === 'Charon');
-          u.rate = 1.06;
-          u.pitch = isMale ? 0.85 : 1.05;
-
-          const voices = window.speechSynthesis.getVoices();
-          const ruVoices = voices.filter(v => v.lang && v.lang.toLowerCase().includes('ru'));
-          if (ruVoices.length > 0) {
-            const preferred = ruVoices.find(v => isMale 
-              ? /dmitry|дмитрий|pavel|павел|male|yuri|юрий/i.test(v.name)
-              : /svetlana|светлана|irina|ирина|female|google/i.test(v.name)
-            );
-            u.voice = preferred || ruVoices[0];
-          }
-
-          let started = false;
-          u.onstart = () => {
-            started = true;
-            onSpeechStart();
-          };
-          u.onend = onSpeechEnd;
-          u.onerror = onSpeechEnd;
-
-          window.speechSynthesis.speak(u);
-
-          setTimeout(() => {
-            if (!started && !finished) {
-              window.speechSynthesis.cancel();
-              const gUrl = `https://translate.googleapis.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(txt.slice(0, 200))}&tl=ru&client=tw-ob`;
-              currentAudio.src = gUrl;
-              currentAudio.onplay = onSpeechStart;
-              currentAudio.onended = onSpeechEnd;
-              currentAudio.onerror = () => {
-                onSpeechStart();
-                setTimeout(onSpeechEnd, 2500);
-              };
-              currentAudio.play().catch(() => {
-                onSpeechStart();
-                setTimeout(onSpeechEnd, 2500);
-              });
-            }
-          }, 700);
-        } else {
-          onSpeechStart();
-          setTimeout(onSpeechEnd, 2500);
-        }
-      };
-
       const isGeminiVoice = ['Puck', 'Fenrir', 'Charon', 'Aoede', 'Kore'].includes(vMode);
+      const isMale = (vMode === 'neural_male' || vMode === 'Puck' || vMode === 'Fenrir' || vMode === 'Charon');
 
+      // 1. Используем актуальную стабильную модель Gemini 3.8 Flash TTS
       if (isGeminiVoice && apiKey) {
-        // Стучимся напрямую в голосовую модель без потери времени на текстовую
-        for (let attempt = 0; attempt < 2; attempt++) {
+        const ttsModels = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'];
+        for (const ttsModel of ttsModels) {
           try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${apiKey}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: `Произнеси с выражением: ${txt}` }] }],
+                contents: [{ parts: [{ text: `Произнеси вслух (только этот текст без вступлений): ${txt}` }] }],
                 generationConfig: {
                   responseModalities: ["AUDIO"],
                   speechConfig: {
@@ -630,12 +579,35 @@
               return;
             }
           } catch (e) {}
-          // Если с первой попытки словили секундный лимит API, ждем 800мс и пробуем еще раз
-          if (attempt === 0) await new Promise(r => setTimeout(r, 800));
         }
       }
 
-      fallbackSpeak();
+      // 2. Красивая нейросетевая озвучка Edge/Yandex без лимитов (если Gemini-голос недоступен)
+      const edgeVoice = isMale ? 'ru-RU-DmitryNeural' : 'ru-RU-SvetlanaNeural';
+      const streamUrls = [
+        `https://api.streamelements.com/kappa/v2/speech?voice=${edgeVoice}&text=${encodeURIComponent(txt)}`,
+        `https://tts.voicetech.yandex.net/tts?text=${encodeURIComponent(txt)}&lang=ru_RU&speaker=${isMale ? 'ermil' : 'alena'}&emotion=evil`
+      ];
+
+      for (const url of streamUrls) {
+        try {
+          const played = await new Promise((resolve) => {
+            currentAudio.onplay = () => {
+              onSpeechStart();
+              resolve(true);
+            };
+            currentAudio.onended = onSpeechEnd;
+            currentAudio.onerror = () => resolve(false);
+            currentAudio.src = url;
+            currentAudio.load();
+            currentAudio.play().catch(() => resolve(false));
+          });
+          if (played) return;
+        } catch (e) {}
+      }
+
+      onSpeechStart();
+      setTimeout(onSpeechEnd, 3000);
     }
 
     function openSettings() { document.getElementById('settingsModal').classList.add('open'); }
@@ -644,7 +616,7 @@
     function saveSettings() {
       initAndUnlockAudio();
       const key = document.getElementById('apiKeyInput').value.trim();
-      const model = document.getElementById('modelInput').value.trim() || 'gemini-3.5-flash-lite';
+      const model = document.getElementById('modelInput').value.trim() || 'gemini-3.8-flash';
       const voice = document.getElementById('voiceSelect').value;
 
       localStorage.setItem('gemini_api_key', key);
