@@ -113,12 +113,11 @@
 
   <script>
     let isListening = false;
-    let isSpeakingOrReacting = false;
+    let isPlayingAudio = false;
     let recognition = null;
     let synth = window.speechSynthesis;
     let audioPlayer = new Audio();
     let talkTimer = null;
-    let reactionTimer = null;
     
     let lastAction = Date.now();
     let currentEmotion = 'idle';
@@ -184,14 +183,14 @@
 
     function resetActivity() {
       lastAction = Date.now();
-      if (!isSpeakingOrReacting && !isListening) {
+      if (!isPlayingAudio && !isListening) {
         setSpriteState('idle');
       }
     }
 
-    // Таймер скуки срабатывает ТОЛЬКО когда волчонок полностью свободен
+    // Таймер бездействия
     setInterval(() => {
-      if (isListening || isSpeakingOrReacting) {
+      if (isListening || isPlayingAudio) {
         lastAction = Date.now();
         return;
       }
@@ -234,7 +233,7 @@
       }
       if (/ахах|ха-ха|хи-хи|лол|смешн|ржу|прикол|кек/.test(combined)) return 'laugh';
 
-      return 'idle';
+      return 'talk';
     }
 
     document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
@@ -252,8 +251,7 @@
 
       recognition.onstart = () => {
         if (talkTimer) clearTimeout(talkTimer);
-        if (reactionTimer) clearTimeout(reactionTimer);
-        isSpeakingOrReacting = false;
+        isPlayingAudio = false;
         audioPlayer.pause();
         if (synth) synth.cancel();
 
@@ -280,10 +278,12 @@
     }
 
     function handleMicClick() {
+      // Разблокируем аудио-контекст прямо в момент касания пальцем
+      audioPlayer.play().then(() => { audioPlayer.pause(); }).catch(() => {});
+
       if (!recognition) { alert('Открой сайт через мобильный Chrome!'); return; }
       if (talkTimer) clearTimeout(talkTimer);
-      if (reactionTimer) clearTimeout(reactionTimer);
-      isSpeakingOrReacting = false;
+      isPlayingAudio = false;
       audioPlayer.pause();
       if (synth) synth.cancel();
 
@@ -306,13 +306,13 @@
     }
 
     async function askGemini(query) {
-      isSpeakingOrReacting = true;
+      isPlayingAudio = true;
       setSpriteState('think');
       const apiKey = localStorage.getItem('gemini_api_key');
       const model = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
 
       if (!apiKey) {
-        isSpeakingOrReacting = false;
+        isPlayingAudio = false;
         speak("Вставь API-ключ в настройках шестерёнки наверху!", 'idle');
         return;
       }
@@ -334,7 +334,7 @@
 
         const data = await res.json();
         if (data.error) {
-          isSpeakingOrReacting = false;
+          isPlayingAudio = false;
           speak("Ошибка Gemini: " + data.error.message, 'cry');
           return;
         }
@@ -346,43 +346,36 @@
 
           const cleanReply = cleanText(reply);
           const reaction = detectContextEmotion(query, cleanReply);
-          
-          chatBubble.innerText = cleanReply;
-
-          // СНАЧАЛА 2.5 секунды показываем яркую эмоцию (бицепс, злость, плач), а потом говорим!
-          if (reaction !== 'idle') {
-            setSpriteState(reaction);
-            reactionTimer = setTimeout(() => {
-              executeSpeech(cleanReply);
-            }, 2600);
-          } else {
-            executeSpeech(cleanReply);
-          }
+          speak(cleanReply, reaction);
         } else {
-          isSpeakingOrReacting = false;
+          isPlayingAudio = false;
           setSpriteState('idle');
         }
       } catch (err) {
-        isSpeakingOrReacting = false;
+        isPlayingAudio = false;
         speak("Связь оборвалась. Проверь сеть или VPN!", 'cry');
       }
     }
 
-    function executeSpeech(txt) {
-      isSpeakingOrReacting = true;
-      setSpriteState('talk');
+    function speak(txt, reactionEmotion = 'talk') {
+      isPlayingAudio = true;
+      chatBubble.innerText = txt;
+      
+      // Включаем сразу нужную эмоцию (злится, красуется или говорит)
+      setSpriteState(reactionEmotion);
 
-      // Точный расчет длительности: ~13 символов в секунду
-      const durationMs = Math.max(1600, Math.round((txt.length / 13) * 1000));
+      if (talkTimer) clearTimeout(talkTimer);
 
-      const stopTalking = () => {
+      const durationMs = Math.max(1600, Math.round((txt.length / 12.5) * 1000));
+
+      const stopSpeech = () => {
         if (talkTimer) clearTimeout(talkTimer);
         audioPlayer.pause();
         if (synth) synth.cancel();
         
-        // РОТ ЗАКРЫВАЕТСЯ СРАЗУ ПО ОКОНЧАНИИ ЗВУКА
+        // По окончанию звука встаем в спокойный idle
         setSpriteState('idle');
-        isSpeakingOrReacting = false;
+        isPlayingAudio = false;
         lastAction = Date.now();
       };
 
@@ -392,15 +385,13 @@
         audioPlayer.src = `https://api.streamelements.com/kappa/v2/speech?voice=${vName}&text=${encodeURIComponent(txt)}`;
         
         audioPlayer.onplay = () => {
-          setSpriteState('talk');
-          // Таймер глушит рот строго секунда в секунду
-          talkTimer = setTimeout(stopTalking, durationMs);
+          talkTimer = setTimeout(stopSpeech, durationMs);
         };
-        audioPlayer.onended = stopTalking;
-        audioPlayer.onerror = () => fallbackSpeak(txt, stopTalking);
-        audioPlayer.play().catch(() => fallbackSpeak(txt, stopTalking));
+        audioPlayer.onended = stopSpeech;
+        audioPlayer.onerror = () => fallbackSpeak(txt, stopSpeech);
+        audioPlayer.play().catch(() => fallbackSpeak(txt, stopSpeech));
       } else {
-        fallbackSpeak(txt, stopTalking);
+        fallbackSpeak(txt, stopSpeech);
       }
     }
 
@@ -409,7 +400,6 @@
       synth.cancel();
       const u = new SpeechSynthesisUtterance(txt);
       u.lang = 'ru-RU';
-      u.onstart = () => setSpriteState('talk');
       u.onend = () => { if(onDone) onDone(); };
       u.onerror = () => { if(onDone) onDone(); };
       synth.speak(u);
