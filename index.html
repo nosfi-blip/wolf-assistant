@@ -55,7 +55,6 @@
 
     .controls { flex-shrink: 0; padding: 10px 16px 14px; display: flex; flex-direction: column; align-items: center; background: rgba(12, 10, 61, 0.95); border-top: 1px solid var(--border); backdrop-filter: blur(12px); gap: 10px; z-index: 10; }
     
-    /* Поле текстового ввода для офиса */
     .text-input-row { display: flex; width: 100%; max-width: 420px; gap: 8px; }
     .chat-input { flex: 1; padding: 10px 14px; background: #16144e; border: 1px solid var(--border); border-radius: 20px; color: #fff; font-size: 0.9rem; outline: none; user-select: text; }
     .chat-input:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(139, 157, 255, 0.25); }
@@ -63,7 +62,6 @@
     .send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); border: none; color: #0c0a3d; font-size: 1.1rem; font-weight: 800; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; transition: transform 0.15s; }
     .send-btn:active { transform: scale(0.92); }
 
-    /* Блок с микрофоном и тумблером автослушания */
     .voice-controls-row { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 420px; padding: 0 4px; }
     
     .auto-listen-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; }
@@ -81,14 +79,19 @@
     .mic-button.active { background: #ff5c7c; transform: scale(1.08); box-shadow: 0 0 22px rgba(255, 92, 124, 0.7); }
     .mic-hint { font-size: 0.76rem; color: var(--text-dim); width: 95px; text-align: right; }
 
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 100; padding: 20px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 100; padding: 16px; }
     .modal-overlay.open { display: flex; }
-    .modal { background: #16144e; border: 1px solid var(--border); border-radius: 18px; padding: 20px; width: 100%; max-width: 380px; }
-    .modal h2 { font-size: 1.15rem; margin-bottom: 14px; color: #fff; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; }
-    .form-control { width: 100%; padding: 10px 12px; background: #0c0a3d; border: 1px solid var(--border); border-radius: 10px; color: #fff; font-size: 0.85rem; outline: none; }
-    .btn { width: 100%; padding: 10px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; margin-top: 8px; font-size: 0.9rem; }
+    .modal { background: #16144e; border: 1px solid var(--border); border-radius: 18px; padding: 18px; width: 100%; max-width: 390px; max-height: 92vh; overflow-y: auto; }
+    .modal h2 { font-size: 1.1rem; margin-bottom: 12px; color: #fff; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 0.78rem; color: var(--text-dim); margin-bottom: 4px; }
+    .form-control { width: 100%; padding: 9px 12px; background: #0c0a3d; border: 1px solid var(--border); border-radius: 10px; color: #fff; font-size: 0.85rem; outline: none; }
+    
+    /* Ряд с заблюренным ключом и его тумблером */
+    .key-row { display: flex; align-items: center; gap: 10px; }
+    .key-row .form-control { flex: 1; }
+
+    .btn { width: 100%; padding: 10px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; margin-top: 7px; font-size: 0.88rem; }
     .btn-save { background: var(--accent); color: #0c0a3d; }
     .btn-clear { background: rgba(255, 92, 124, 0.15); color: #ff5c7c; border: 1px solid #ff5c7c; }
     .btn-close { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
@@ -138,10 +141,40 @@
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
       <h2>Настройки</h2>
+
       <div class="form-group">
-        <label>API Ключи (можно несколько через запятую для обхода лимитов):</label>
-        <input type="text" id="apiKeyInput" class="form-control" placeholder="Ключ 1, Ключ 2, Ключ 3...">
+        <label>API Ключ 1:</label>
+        <div class="key-row">
+          <input type="password" id="apiKey1" class="form-control" placeholder="Вставьте ключ 1">
+          <label class="switch">
+            <input type="checkbox" id="keyToggle1" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
       </div>
+
+      <div class="form-group">
+        <label>API Ключ 2 (резервный):</label>
+        <div class="key-row">
+          <input type="password" id="apiKey2" class="form-control" placeholder="Вставьте ключ 2">
+          <label class="switch">
+            <input type="checkbox" id="keyToggle2" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>API Ключ 3 (резервный):</label>
+        <div class="key-row">
+          <input type="password" id="apiKey3" class="form-control" placeholder="Вставьте ключ 3">
+          <label class="switch">
+            <input type="checkbox" id="keyToggle3" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>Модель:</label>
         <input type="text" id="modelInput" class="form-control" value="gemini-3.8-flash">
@@ -172,7 +205,6 @@
     
     let audioCtx = null;
     let currentSource = null;
-    let currentKeyIndex = 0;
     
     let lastAction = Date.now();
     let currentEmotion = 'idle';
@@ -218,13 +250,50 @@
     }
     window.addEventListener('load', preloadAllSprites);
 
-    // Инициализация тумблера автослушания
     autoListenToggle.checked = autoListen;
     if (autoListen) autoListenLabel.classList.add('on');
 
-    function getApiKeys() {
-      const raw = localStorage.getItem('gemini_api_key') || '';
-      return raw.split(/[,;\s]+/).map(k => k.trim()).filter(Boolean);
+    // Загрузка сохраненных ключей (с переносом старого ключа, если он был)
+    function initKeyInputs() {
+      const legacyRaw = localStorage.getItem('gemini_api_key') || '';
+      const legacyParts = legacyRaw.split(/[,;\s]+/).map(k => k.trim()).filter(Boolean);
+
+      for (let i = 1; i <= 3; i++) {
+        let savedVal = localStorage.getItem(`jam_key_${i}`);
+        if (savedVal === null && legacyParts[i - 1]) {
+          savedVal = legacyParts[i - 1];
+          localStorage.setItem(`jam_key_${i}`, savedVal);
+        }
+        document.getElementById(`apiKey${i}`).value = savedVal || '';
+
+        const savedEnabled = localStorage.getItem(`jam_key_${i}_on`);
+        document.getElementById(`keyToggle${i}`).checked = savedEnabled === null ? true : (savedEnabled === 'true');
+      }
+    }
+    initKeyInputs();
+
+    // Получаем список только включенных тумблером ключей
+    function getActiveKeyObjects() {
+      const list = [];
+      for (let i = 1; i <= 3; i++) {
+        const val = (localStorage.getItem(`jam_key_${i}`) || '').trim();
+        const isOn = localStorage.getItem(`jam_key_${i}_on`) !== 'false';
+        if (val && isOn) {
+          list.push({ slot: i, key: val });
+        }
+      }
+      return list;
+    }
+
+    // Автоматически выключаем тумблер ключа, если на нем закончился лимит TTS, чтобы сразу работал следующий
+    function disableExhaustedKeySlot(slotIndex) {
+      const activeNow = getActiveKeyObjects();
+      // Выключаем автоматически только если есть хотя бы еще один включенный ключ на подхвате
+      if (activeNow.length > 1) {
+        localStorage.setItem(`jam_key_${slotIndex}_on`, 'false');
+        const toggleEl = document.getElementById(`keyToggle${slotIndex}`);
+        if (toggleEl) toggleEl.checked = false;
+      }
     }
 
     function initAndUnlockAudio() {
@@ -295,7 +364,6 @@
       }
     }
 
-    // Отправка текста из поля ввода (для стелс-режима в офисе)
     function handleTextSend() {
       const text = chatInput.value.trim();
       if (!text) return;
@@ -305,14 +373,13 @@
       if (postEmotionTimeout) clearTimeout(postEmotionTimeout);
       stopCurrentSpeech();
 
-      // Если микрофон слушал — временно останавливаем его на время генерации ответа
       if (isListening && recognition) {
         manualStop = true;
         recognition.stop();
       }
 
       chatInput.value = '';
-      chatInput.blur(); // Прячем клавиатуру на телефоне
+      chatInput.blur();
       chatBubble.innerText = 'Ты: ' + text;
       chatBubble.scrollTop = chatBubble.scrollHeight;
       askGemini(text);
@@ -439,7 +506,6 @@
       }
     }, 1000);
 
-    document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
     const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
     document.getElementById('modelInput').value = savedModel;
     brandTag.innerText = savedModel.includes('gemini') ? savedModel.replace('gemini-', '') : savedModel;
@@ -476,7 +542,6 @@
         micBtn.classList.remove('active');
         if (!isThinking && !isSpeaking) {
           setSpriteState('idle');
-          // Если в авторежиме была просто тишина (no-speech), перезапускаем слушание
           if (autoListen && !manualStop && e.error !== 'not-allowed') {
             setTimeout(startListeningSafely, 400);
           } else {
@@ -534,12 +599,12 @@
       resetActivityTimer();
       setSpriteState('think');
       
-      const keys = getApiKeys();
+      const activeKeys = getActiveKeyObjects();
       const model = localStorage.getItem('gemini_model') || 'gemini-3.8-flash';
 
-      if (keys.length === 0) {
+      if (activeKeys.length === 0) {
         isThinking = false;
-        chatBubble.innerText = "Загляни в настройки на шестерёнке и вставь API-ключ!";
+        chatBubble.innerText = "Загляни в шестерёнку ⚙️ — вставь и включи хотя бы один API-ключ!";
         setSpriteState('idle');
         return;
       }
@@ -550,10 +615,10 @@
       const prompt = "Ты — Джем, харизматичный, остроумный и живой чиби-волк в футболке с Gemini, лучший друг и напарник своей собеседницы. Ты общаешься с ней голосом на 'ты' (она девушка). Твоя главная черта — эмоциональная гибкость и адекватность, как у живого близкого друга. Когда с тобой здороваются, делятся мыслями или просто общаются — отвечай тепло, дружелюбно, с легким юмором, живым интересом и поддержкой. НИКОГДА не хами, не груби и не оскорбляй собеседницу просто так! Если она хочет кого-то обсудить, посплетничать или пожаловаться — включай слейный вайб, будь на её стороне на все сто процентов, эмоционально поддерживай и с удовольствием разноси тех, кто её бесит. Если же она сама начинает тебя шутливо подкалывать или дразнить — тогда можешь остроумно и с характером огрызнуться в ответ или притворно надуться, но без злой токсичности. Забудь про канцелярит и шаблонные фразы роботов. Отвечай кратко (1-2 емких предложения), легко и естественно, от первого лица (в мужском роде). КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать звездочки, смайлики, скобки и описания действий от третьего лица.";
 
       let lastErr = "";
-      for (let i = 0; i < keys.length; i++) {
-        const apiKey = keys[(currentKeyIndex + i) % keys.length];
+      for (let i = 0; i < activeKeys.length; i++) {
+        const keyObj = activeKeys[i];
         try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keyObj.key}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -563,7 +628,8 @@
           });
 
           if (res.status === 429) {
-            lastErr = "Лимит запросов (429)";
+            lastErr = `Лимит на Ключе ${keyObj.slot}`;
+            disableExhaustedKeySlot(keyObj.slot);
             continue;
           }
 
@@ -575,7 +641,6 @@
 
           const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (reply) {
-            currentKeyIndex = (currentKeyIndex + i) % keys.length;
             chatHistory.push({ role: "model", parts: [{ text: reply }] });
             localStorage.setItem('jam_chat_history', JSON.stringify(chatHistory));
             const cleanReply = cleanText(reply);
@@ -590,7 +655,7 @@
 
       isThinking = false;
       setSpriteState('cry');
-      chatBubble.innerText = "Ошибка связи или лимит ключа: " + lastErr;
+      chatBubble.innerText = "Ошибка связи или лимит ключей: " + lastErr;
     }
 
     async function playGeminiAudio(base64Data, mimeType, onPlay, onEnd) {
@@ -683,7 +748,7 @@
       };
 
       const vMode = localStorage.getItem('jam_voice') || 'Puck';
-      const keys = getApiKeys();
+      const activeKeys = getActiveKeyObjects();
 
       const ttsModels = [
         'gemini-3.8-flash-tts',
@@ -693,16 +758,19 @@
 
       let hitQuotaLimit = false;
 
-      for (let k = 0; k < keys.length; k++) {
-        const apiKey = keys[(currentKeyIndex + k) % keys.length];
+      // Перебираем включенные тумблером ключи
+      for (let k = 0; k < activeKeys.length; k++) {
+        const keyObj = activeKeys[k];
+        let keyExhaustedAllTts = true;
 
         for (const ttsModel of ttsModels) {
           try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${apiKey}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${keyObj.key}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: `Read aloud verbatim: "${txt}"` }] }],
+                // Только чистый русский текст ответа без английских команд!
+                contents: [{ parts: [{ text: txt }] }],
                 generationConfig: {
                   responseModalities: ["AUDIO"],
                   speechConfig: {
@@ -719,12 +787,12 @@
               continue;
             }
 
+            keyExhaustedAllTts = false;
             const data = await res.json();
             const parts = data.candidates?.[0]?.content?.parts || [];
             const audioPart = parts.find(p => p.inlineData && p.inlineData.data);
 
             if (audioPart) {
-              currentKeyIndex = (currentKeyIndex + k) % keys.length;
               await playGeminiAudio(
                 audioPart.inlineData.data,
                 audioPart.inlineData.mimeType,
@@ -735,11 +803,16 @@
             }
           } catch (e) {}
         }
+
+        // Если этот ключ выдал ошибку 429 на всех TTS-моделях, выключаем его тумблер и переходим к следующему ключу
+        if (keyExhaustedAllTts && hitQuotaLimit) {
+          disableExhaustedKeySlot(keyObj.slot);
+        }
       }
 
       onSpeechStart();
       if (hitQuotaLimit) {
-        statusText.innerText = 'Лимит TTS на ключе (добавь ещё ключ в ⚙️)';
+        statusText.innerText = 'Лимит голоса на включенных ключах ⚙️';
       }
       setTimeout(onSpeechEnd, 3500);
     }
@@ -749,18 +822,24 @@
     
     function saveSettings() {
       initAndUnlockAudio();
-      const key = document.getElementById('apiKeyInput').value.trim();
+
+      for (let i = 1; i <= 3; i++) {
+        const val = document.getElementById(`apiKey${i}`).value.trim();
+        const isOn = document.getElementById(`keyToggle${i}`).checked;
+        localStorage.setItem(`jam_key_${i}`, val);
+        localStorage.setItem(`jam_key_${i}_on`, isOn ? 'true' : 'false');
+      }
+
       const model = document.getElementById('modelInput').value.trim() || 'gemini-3.8-flash';
       const voice = document.getElementById('voiceSelect').value;
 
-      localStorage.setItem('gemini_api_key', key);
       localStorage.setItem('gemini_model', model);
       localStorage.setItem('jam_voice', voice);
 
       brandTag.innerText = model.includes('gemini') ? model.replace('gemini-', '') : model;
       closeSettings();
       resetActivityTimer();
-      chatBubble.innerText = 'Настройки обновлены. Слушаю! 🐾';
+      chatBubble.innerText = 'Настройки сохранены. Слушаю! 🐾';
     }
 
     function clearMemory() {
